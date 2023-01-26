@@ -636,7 +636,7 @@ void draw() {
         fill(255);
         textFont(SalahName);
         textAlign(CENTER);
-        textSize(600);
+        textSize(x(600));
         text("Asr", rtpanex, rtpaney-y(200));
         textFont(SalahTimeFont);
         textAlign(CENTER);
