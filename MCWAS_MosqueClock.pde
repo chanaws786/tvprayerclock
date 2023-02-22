@@ -14,6 +14,7 @@ int MAX_WIDTH = 3840;
 int MAX_HEIGHT = 2160;
 float xRatio;
 float yRatio;
+Table table;
 
 // Fonts
 PFont TimeFont;
@@ -23,21 +24,21 @@ PFont SalahTimeFontHeading;
 PFont TodaysDateFont;
 PFont CountDownFont;
 PFont LargeCountDownFont;
-PFont SalahName;
+PFont SalahNameFont;
 
 
 
 void setup() {
-  
+
   //size(3840, 2160);
   //viewWidth = 1280;
   //viewHeight = 720;
   //size(1280, 720);
-    
+
   fullScreen(P2D);
   viewWidth = displayWidth;
   viewHeight = displayHeight;
-  
+
   xRatio = float(viewWidth) / float(MAX_WIDTH);
   yRatio = float(viewHeight) / float(MAX_HEIGHT);
   print (xRatio+ " " + yRatio);
@@ -58,16 +59,16 @@ void setup() {
   TodaysDateFont = createFont("font/AvenirNextLTPro-Regular.otf", x(90));
   CountDownFont = createFont("font/AvenirNextLTPro-Regular.otf", x(700));
   LargeCountDownFont = createFont("font/AvenirNextLTPro-Regular.otf", x(900));
-  SalahName = createFont("font/AvenirNextLTPro-Regular.otf", x(600));
+  SalahNameFont = createFont("font/AvenirNextLTPro-Regular.otf", x(600));
 
   // Get the day of the week to determine if its Jumuah
   Calendar c = Calendar.getInstance();
   dayOfWeek = c.get(Calendar.DAY_OF_WEEK);
+  // Load the timetable file
+  table = loadTable("data/Prayer Timetable.csv", "header");
 }
 
 void draw() {
-  // Load the timetable file
-  Table table = loadTable("data/Prayer Timetable.csv", "header");
 
   // Set Background
   // Construct the canvas
@@ -164,535 +165,298 @@ void draw() {
   String dsi = str(d);
   //String msi = str(mmm);
   TodaysDate = (dsi + " " + mmm);
+  TableRow row = table.findRow(TodaysDate, "Date");
+  if (row==null) {
+    // Error Message
+    fill(255);
+    textAlign(LEFT);
+    textFont(createFont("font/AvenirNextLTPro-Regular.otf", x(50)));
+    text("No row found for date '"+TodaysDate +"' in the spreadsheet", x(10), y(320));
+    return;
+  }
+
   FullTodaysDate = (TodaysDate + " " + str(yr));
+  CurrentTotalTimeMins = h*60 + mi;
+  
+  int rowNum = row.getInt("RowNum");
+  int nextRowNum = rowNum+1;
+  if (nextRowNum > table.getRowCount()) { // If today is last day of the year, next day would be 1st Jan.
+    nextRowNum = 0;
+  }
 
-  //Iterate through the file
-  for (TableRow row : table.rows()) {
+  TableRow nextRow = table.getRow(nextRowNum-1);
+  String Date = row.getString("Date");
+  String Day = row.getString("Day");
+  String Sunrise = row.getString("Sunrise");
 
-    // Set the CurrentTotalTimeMins which is ues to control the elements in the right pane
-    // We need to subtract 12 because the salah time in spreadsheet are in 12 hour clock format without the AM/PM indicator
-    if (h > 12) {
-      CurrentTotalTimeMins = (((h-12)*60) + mi);
+  Times fajr = getTimesFor("Fajr", "Fajr Jamah", "Fajr Begins", null, row, nextRow, CurrentTotalTimeMins, 0, false);
+  Times dhuhr = getTimesFor("Dhuhr", "Dhuhr Jamah", "Dhuhr Begins", null, row, nextRow, CurrentTotalTimeMins, 0, true);
+  Times asr = getTimesFor("Asr", "Asr Jamah", "Mithl 1", "Mithl 2", row, nextRow, CurrentTotalTimeMins, 12, false);
+  Times maghrib = getTimesFor("Maghrib", "Maghrib Jamah", "Maghrib Begins", null, row, nextRow, CurrentTotalTimeMins, 12, false);
+  Times isha = getTimesFor("Isha", "Isha Jamah", "Isha Begins", null, row, nextRow, CurrentTotalTimeMins, 12, false);
+
+  int SunriseTotalTimeMins = salahTimeInMinutes(Sunrise, 0, false);
+  int KarahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
+
+  // Hijri Date
+  String HijriDate = row.getString("Hijri Date");
+  String HijriMonth = row.getString("Hijri Month");
+  String HijriYear = row.getString("Hijri Year");
+  //String FullTodaysDateWithHijri = "";
+
+  // Create Date to display which is Gregoran and Hijri Date
+  FullHijriDate = (HijriDate + " " + HijriMonth + " " + HijriYear);
+
+  // Print Time and Todays Date First
+  if (Date.equals(TodaysDate) == true) {
+    // Large Clock
+    fill(255);
+    textAlign(LEFT);
+    textFont(TimeFont);
+    text(Time, x(10), y(320));
+
+    // Gregorian Date display
+    fill(255);
+    textAlign(RIGHT);
+    textFont(TodaysDateFont);
+    text(FullTodaysDate, x(2350), y(200));
+
+    // Hijri Date display
+    fill(255);
+    textAlign(RIGHT);
+    textFont(TodaysDateFont);
+    text(FullHijriDate, x(2350), y(320));
+
+
+    String[] JummahArray = split(JummahTime, ':');
+    int JummahHrs = parseInt(JummahArray[0]);
+    int JummahMin = parseInt(JummahArray[1]);
+    int JummahTotalTimeMins = JummahHrs<12?(JummahHrs+12)*60 + JummahMin:JummahHrs*60 + JummahMin;
+
+    // Salah Text Allignment
+    int snax = x(156);
+    int snay = y(848);
+    int snay_gap = y(280);
+    int stabx = x(950);
+    int stasx = x(2300);
+
+
+    //*** Debug - uncomment if required
+    //println("Todays Date: " + Date);
+    //println("Time Now   : " + h + ":"+ mi);
+    //println("Current Total Time in Mins: " +  CurrentTotalTimeMins);
+    //println("TimeNow:" + Time + "  FajrTime    : "     + FajrHrs      + ":"   + FajrMin      + " Array: "   + FajrJamah    +  " Array Length: "  + FajrArray.length  + " Fajr Total Min: " + FajrTotalTimeMins);
+    //println("TimeNow:" + Time + "  DhurTime    : "     + DhuhrHrs     + ":"   + DhuhrMin     + " Array: "   + DhuhrJamah   +  " Array Length: "  + DhuhrArray.length  + " Dhur Total Min: " + dhuhr.timeInMinutes);
+    //println("TimeNow:" + Time + "  AsrTime     : "     + AsrHrs       + ":"   + AsrMin       + " Array: "   + AsrJamah   +  " Array Length: "  + AsrArray.length  + " Asr Total Min: " + AsrTotalTimeMins);
+    //println("TimeNow:" + Time + "  MaghribTime : "     + MaghribHrs   + ":"   + MaghribMin   + " Array: "   + MaghribJamah   +  " Array Length: "  + MaghribArray.length  + " Maghrib Total Min: " + MaghribTotalTimeMins);
+    //println("TimeNow:" + Time + "  IshaTime    : "     + IshaHrs      + ":"   + IshaMin      + " Array: "   + IshaJamah   +  " Array Length: "  + IshaArray.length  + " Isha Total Min: " + IshaTotalTimeMins);
+
+    // *** DISPLAY HEADINGS ****
+    fill(255);
+    textFont(SalahTimeFontHeading);
+    textAlign(LEFT);
+    textFont(TodaysDateFont);
+    text("BEGINS", stabx, y(600));
+    textFont(TodaysDateFont);
+    textAlign(RIGHT);
+    text("JAMAAT", stasx, y(600));
+
+    // *** DISPLAY SALAH NAMES
+    textFont(SalahTimeFont);
+    textAlign(LEFT);
+    text("Fajr", snax, snay);
+
+    // Substitute Jummah for Dhuhr on Fridays
+    if (Day.equals("Fri") == true) {
+      text("Jum'uah", snax, snay+snay_gap);
     } else {
-      CurrentTotalTimeMins = (((h)*60) + mi);
+      text("Dhuhr", snax, snay+snay_gap);
     }
 
-    // int Number = row.getInt("RowNum");
-    String Date = row.getString("Date");
-    String Day = row.getString("Day");
-    String FajrJamah = row.getString("Fajr Jamah");
-    String Sunrise = row.getString("Sunrise");
-    String DhuhrJamah = row.getString("Dhuhr Jamah");
-    String AsrJamah = row.getString("Asr Jamah");
-    String MaghribJamah = row.getString("Maghrib Jamah");
-    String IshaJamah = row.getString("Isha Jamah");
-    String FajrBegins = row.getString("Fajr Begins");
-    String DhuhrBegins = row.getString("Dhuhr Begins");
-    String AsrBegins1 = row.getString("Mithl 1");
-    String AsrBegins2 = row.getString("Mithl 2");
-    String AsrBeginsConcat;
-    String MaghribBegins = row.getString("Maghrib Begins");
-    String IshaBegins = row.getString("Isha Begins");
+    text("Asr", snax, (snay+2*snay_gap));
+    text("Maghrib", snax, snay+3*snay_gap);
+    text("Isha", snax, snay+4*snay_gap);
 
-    String[] FajrArray = split(FajrJamah, ':');
-    String[] SunriseArray = split(Sunrise, ':');
-    String[] DhuhrBeginArray = split(DhuhrBegins, ':');
-    String[] DhuhrArray = split(DhuhrJamah, ':');
-    String[] AsrArray = split(AsrJamah, ':');
-    String[] MaghribArray = split(MaghribJamah, ':');
-    String[] IshaArray = split(IshaJamah, ':');
+    // *** DISPLAY SALAH JAMAH TIMES
+    textFont(SalahTimeFontBold);
+    textAlign(RIGHT);
 
-    int FajrHrs = parseInt(FajrArray[0]);
-    int FajrMin = parseInt(FajrArray[1]);
-    int FajrTotalTimeMins = ((FajrHrs*60) +  FajrMin);
-    int FajrSalahInProgressOffset = FajrTotalTimeMins + SalahInProgressOffset;
+    // Set Prayer Times
+    text(fajr.jamahTime, stasx, snay);
 
-    int SunriseHrs = parseInt(SunriseArray[0]);
-    int SunriseMin = parseInt(SunriseArray[1]);
-    int SunriseTotalTimeMins = ((SunriseHrs*60) +  SunriseMin);
+    // Set Dhur Time - Adjust for Jumamh
+    if (Day.equals("Fri") == true) {
+      text(JummahTime, stasx, snay+snay_gap);
+    } else {
+      text(dhuhr.jamahTime, stasx, snay+snay_gap);
+    }
 
-    int DhuhrBeginsHrs = parseInt(DhuhrBeginArray[0]);
-    int DhuhrBeginsMin = parseInt(DhuhrBeginArray[(DhuhrBeginArray.length)-1]);
-    int DhuhrBeginsTotalMins = ((DhuhrBeginsHrs*60) +  DhuhrBeginsMin);
-    int KarahatTime = DhuhrBeginsTotalMins - KarahatTimeOffset;
+    text(asr.jamahTime, stasx, snay+2*snay_gap);
+    text(maghrib.jamahTime, stasx, snay+3*snay_gap);
+    text(isha.jamahTime, stasx, snay+4*snay_gap);
 
-    int DhuhrHrs = parseInt(DhuhrArray[0]);
-    int DhuhrMin = parseInt(DhuhrArray[(DhuhrArray.length)-1]); // I dont know why I cant reference the array directly
-    int DhuhrTotalTimeMins = ((DhuhrHrs * 60) + DhuhrMin);
-    int DhuhrSalahInProgressOffset = DhuhrTotalTimeMins + SalahInProgressOffset;
+    // *** DISPLAY SALAH JAMAH BEGIN TIMES
+    textFont(SalahTimeFont);
+    textAlign(LEFT);
 
-    int AsrHrs = parseInt(AsrArray[0]);
-    int AsrMin = parseInt(AsrArray[1]);
-    int AsrTotalTimeMins = ((AsrHrs * 60) + AsrMin);
-    int AsrSalahInProgressOffset = AsrTotalTimeMins + SalahInProgressOffset;
-
-    int MaghribHrs = parseInt(MaghribArray[0]);
-    int MaghribMin = parseInt(MaghribArray[1]);
-    int MaghribTotalTimeMins = ((MaghribHrs * 60) + MaghribMin);
-    int MaghribSalahInProgressOffset = MaghribTotalTimeMins + SalahInProgressOffset;
-
-    int IshaHrs = parseInt(IshaArray[0]);
-    int IshaMin = parseInt(IshaArray[1]);
-    int IshaTotalTimeMins = ((IshaHrs * 60) + IshaMin);
-    int IshaSalahInProgressOffset = IshaTotalTimeMins + SalahInProgressOffset;
-
-    // Hijri Date
-    String HijriDate = row.getString("Hijri Date");
-    String HijriMonth = row.getString("Hijri Month");
-    String HijriYear = row.getString("Hijri Year");
-    //String FullTodaysDateWithHijri = "";
-
-    // Create Date to display which is Gregoran and Hijri Date
-    FullHijriDate = (HijriDate + " " + HijriMonth + " " + HijriYear);
+    text(fajr.startTime1, stabx, snay);
+    text(dhuhr.startTime1, stabx, snay+snay_gap);
+    // Set Asr Begins Time - we need to show Mitl 1 and Mitl 2
+    text(asr.startTime1 + " / " + asr.startTime2, stabx, snay+2*snay_gap);
+    text(maghrib.startTime1, stabx, snay+3*snay_gap);
+    text(isha.startTime1, stabx, snay+4*snay_gap);
 
 
-    // Print Time and Todays Date First
-    if (Date.equals(TodaysDate) == true) {
-      // Large Clock
-      fill(255);
-      textAlign(LEFT);
-      textFont(TimeFont);
-      text(Time, x(10), y(320));
+    // ** Right Pane Text //
+    // 60 seconds timer.
+    if (CurrentTotalTimeMins == fajr.jamahTimeInMinutes-1) {
+      show60SecondsTimerFor(fajr);
+    } else if (CurrentTotalTimeMins == dhuhr.jamahTimeInMinutes-1 && !Day.equals("Fri")) {
+      show60SecondsTimerFor(dhuhr);
+    } else if (CurrentTotalTimeMins == asr.jamahTimeInMinutes-1) {
+      show60SecondsTimerFor(asr);
+    } else if (CurrentTotalTimeMins == maghrib.jamahTimeInMinutes-1) {
+      show60SecondsTimerFor(maghrib);
+    } else if (CurrentTotalTimeMins == isha.jamahTimeInMinutes-1) {
+      show60SecondsTimerFor(isha);
+    }
+    // Minute Timers
+    else if ((CurrentTotalTimeMins > fajr.jamahTimeInMinutes-LargeCountDown && CurrentTotalTimeMins < fajr.jamahTimeInMinutes-1)) {
+      showMinutesTimerFor(fajr, CurrentTotalTimeMins);
+    } else if (CurrentTotalTimeMins >= KarahatTime && CurrentTotalTimeMins < dhuhr.startTimeInMinutes) {
+      showTimerFor("Zawal Time", dhuhr.startTimeInMinutes-CurrentTotalTimeMins, "minutes");
+    } else if (CurrentTotalTimeMins >= (dhuhr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes-1) && !Day.equals("Fri")) {
+      showMinutesTimerFor(dhuhr, CurrentTotalTimeMins);
+    } else if (CurrentTotalTimeMins >= (asr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (asr.jamahTimeInMinutes-1)) {
+      showMinutesTimerFor(asr, CurrentTotalTimeMins);
+    } else if (CurrentTotalTimeMins >= (maghrib.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes-1)) {
+      showMinutesTimerFor(maghrib, CurrentTotalTimeMins);
+    } else if (CurrentTotalTimeMins >= (isha.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (isha.jamahTimeInMinutes-1)) {
+      showMinutesTimerFor(isha, CurrentTotalTimeMins);
+    }
 
-      // Gregorian Date display
-      fill(255);
-      textAlign(RIGHT);
-      textFont(TodaysDateFont);
-      text(FullTodaysDate, x(2350), y(200));
+    // In Progress
+    else if (CurrentTotalTimeMins >= fajr.jamahTimeInMinutes && CurrentTotalTimeMins < (fajr.jamahTimeInMinutes + SalahInProgressOffset)) {
+      showPrayerInProgressFor(fajr.name);
+    } else if (CurrentTotalTimeMins >= SunriseTotalTimeMins && CurrentTotalTimeMins < (SunriseTotalTimeMins+SunriseOffset)) {
+      showPrayerInProgressFor("Sunrise");
+    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes + SalahInProgressOffset) && !Day.equals("Fri")) {
+      showPrayerInProgressFor(dhuhr.name);
+    } else if (CurrentTotalTimeMins >= JummahTotalTimeMins && CurrentTotalTimeMins <(JummahTotalTimeMins + JummahLenghthMin) && Day.equals("Fri")) {
+      showPrayerInProgressFor("Jum'uah");
+    } else if (CurrentTotalTimeMins >= asr.jamahTimeInMinutes && CurrentTotalTimeMins < (asr.jamahTimeInMinutes + SalahInProgressOffset)) {
+      showPrayerInProgressFor(asr.name);
+    } else if (CurrentTotalTimeMins >= maghrib.jamahTimeInMinutes && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes + SalahInProgressOffset)) {
+      showPrayerInProgressFor(maghrib.name);
+    } else if (CurrentTotalTimeMins >= isha.jamahTimeInMinutes && CurrentTotalTimeMins < (isha.jamahTimeInMinutes + SalahInProgressOffset)) {
+      showPrayerInProgressFor(isha.name);
+    }
 
-      // Hijri Date display
-      fill(255);
-      textAlign(RIGHT);
-      textFont(TodaysDateFont);
-      text(FullHijriDate, x(2350), y(320));
-
-
-      String[] JummahArray = split(JummahTime, ':');
-      int JummahHrs = parseInt(JummahArray[0]);
-      int JummahMin = parseInt(JummahArray[1]);
-      int JummahTotalTimeMins = ((JummahHrs*60) + JummahMin);
-      int JummahInProgressOffset = JummahTotalTimeMins + JummahLenghthMin;
-
-      // Salah Text Allignment
-      int snax = x(156);
-      int snay = y(848);
-      int snay_gap = y(280);
-      int stabx = x(950);
-      int stasx = x(2300);
-
-
-      //*** Debug - uncomment if required
-      //println("Todays Date: " + Date);
-      //println("Time Now   : " + h + ":"+ mi);
-      //println("Current Total Time in Mins: " +  CurrentTotalTimeMins);
-      //println("TimeNow:" + Time + "  FajrTime    : "     + FajrHrs      + ":"   + FajrMin      + " Array: "   + FajrJamah    +  " Array Length: "  + FajrArray.length  + " Fajr Total Min: " + FajrTotalTimeMins);
-      //println("TimeNow:" + Time + "  DhurTime    : "     + DhuhrHrs     + ":"   + DhuhrMin     + " Array: "   + DhuhrJamah   +  " Array Length: "  + DhuhrArray.length  + " Dhur Total Min: " + DhuhrTotalTimeMins);
-      //println("TimeNow:" + Time + "  AsrTime     : "     + AsrHrs       + ":"   + AsrMin       + " Array: "   + AsrJamah   +  " Array Length: "  + AsrArray.length  + " Asr Total Min: " + AsrTotalTimeMins);
-      //println("TimeNow:" + Time + "  MaghribTime : "     + MaghribHrs   + ":"   + MaghribMin   + " Array: "   + MaghribJamah   +  " Array Length: "  + MaghribArray.length  + " Maghrib Total Min: " + MaghribTotalTimeMins);
-      //println("TimeNow:" + Time + "  IshaTime    : "     + IshaHrs      + ":"   + IshaMin      + " Array: "   + IshaJamah   +  " Array Length: "  + IshaArray.length  + " Isha Total Min: " + IshaTotalTimeMins);
-
-      // *** DISPLAY HEADINGS ****
-      fill(255);
-      textFont(SalahTimeFontHeading);
-      textAlign(LEFT);
-      textFont(TodaysDateFont);
-      text("BEGINS", stabx, y(600));
-      textFont(TodaysDateFont);
-      textAlign(RIGHT);
-      text("JAMAAT", stasx, y(600));
-
-      // *** DISPLAY SALAH NAMES
-      textFont(SalahTimeFont);
-      textAlign(LEFT);
-      text("Fajr", snax, snay);
-
-      // Substitute Jummah for Dhuhr on Fridays
-      if (Day.equals("Fri") == true) {
-        text("Jum'uah", snax, snay+snay_gap);
-      } else {
-        text("Dhuhr", snax, snay+snay_gap);
-      }
-
-      text("Asr", snax, (snay+2*snay_gap));
-      text("Maghrib", snax, snay+3*snay_gap);
-      text("Isha", snax, snay+4*snay_gap);
-
-      // *** DISPLAY SALAH JAMAH TIMES
-      textFont(SalahTimeFontBold);
-      textAlign(RIGHT);
-
-      // Set Fajr Time
-      text(FajrJamah, stasx, snay);
-
-      // Set Dhur Time - Adjust for Jumamh
-      if (Day.equals("Fri") == true) {
-        text(JummahTime, stasx, snay+snay_gap);
-      } else {
-        text(DhuhrJamah, stasx, snay+snay_gap);
-      }
-
-      // Set Asr Time
-      text(AsrJamah, stasx, snay+2*snay_gap);
-
-      // Set Maghrib Time
-      text(MaghribJamah, stasx, snay+3*snay_gap);
-
-      // Set Isha Time
-      text(IshaJamah, stasx, snay+4*snay_gap);
-
-      // *** DISPLAY SALAH JAMAH BEGIN TIMES
-      textFont(SalahTimeFont);
-      textAlign(LEFT);
-
-      // Set Fajr Time Begins
-      text(FajrBegins, stabx, snay);
-
-      // Set Dhur Time Begins - Adjust for Jummah
-      if (Day.equals("Fri") == true) {
-        text(DhuhrBegins, stabx, snay+snay_gap);
-      } else {
-        text(DhuhrBegins, stabx, snay+snay_gap);
-      }
-
-      // Set Asr Begins Time - we need to show Mitl 1 and Mitl 2
-      AsrBeginsConcat = (AsrBegins1 + " / " + AsrBegins2);
-      text(AsrBeginsConcat, stabx, snay+2*snay_gap);
-
-      // Set Maghrib Begins Time
-      text(MaghribBegins, stabx, snay+3*snay_gap);
-
-      // Set Isha Time
-      text(IshaBegins, stabx, snay+4*snay_gap);
-
-
-
-      // ** Right Pane Text //
-
-      // Fajr //
-      // The h<12 is to ensure that this triggers in AM only
-      if ((h<12 && CurrentTotalTimeMins > FajrTotalTimeMins-LargeCountDown && CurrentTotalTimeMins < FajrTotalTimeMins-1)) {
-        fill(CurrentTotalTimeMins);
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Fajr", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text((FajrTotalTimeMins-CurrentTotalTimeMins), rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("minutes", rtpanex, rtpaney+y(300));
-      }
-      if ((h<12 && CurrentTotalTimeMins == FajrTotalTimeMins-1)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        int cdd = SalahCountDownStart - second();
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Fajr", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text(cdd, rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("seconds", rtpanex, rtpaney+y(300));
-      }
-
-
-      // KarahatTime - It is the time when performing salat is makrûh tahrimî, that is, harâm, during the Sun is setting (post the point it is above your head.//
-      if (h>= 11 && (CurrentTotalTimeMins >= KarahatTime) && (CurrentTotalTimeMins < DhuhrBeginsTotalMins)) {
-        fill(CurrentTotalTimeMins);
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Zawal Time", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text((DhuhrBeginsTotalMins-CurrentTotalTimeMins), rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("minutes", rtpanex, rtpaney+y(300));
-      }
-
-
-      // Dhuhr //
-      // The h>=12 is to ensure this triggers in PM
-      if (h>= 12 && (CurrentTotalTimeMins >= DhuhrTotalTimeMins-LargeCountDown) && (CurrentTotalTimeMins < DhuhrTotalTimeMins-1) && (Day.equals("Fri") == false)) {
-        fill(CurrentTotalTimeMins);
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Dhuhr", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text((DhuhrTotalTimeMins-CurrentTotalTimeMins), rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("minutes", rtpanex, rtpaney+y(300));
-      }
-      if (h>= 12 && (CurrentTotalTimeMins == DhuhrTotalTimeMins-1) && (Day.equals("Fri") == false)) {
-        //println("In Dhuhr Countdwn");
-        //background(countdown);
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        int cdd = SalahCountDownStart - second();
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Dhuhr", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text(cdd, rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("seconds", rtpanex, rtpaney+y(300));
-      }
-
-
-      // Asr //
-      if (h>= 12 && (CurrentTotalTimeMins >= AsrTotalTimeMins-LargeCountDown && CurrentTotalTimeMins < AsrTotalTimeMins-1)) {
-        fill(CurrentTotalTimeMins);
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Asr", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text((AsrTotalTimeMins-CurrentTotalTimeMins), rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("minutes", rtpanex, rtpaney+y(300));
-      }
-      if (h>= 12 && (CurrentTotalTimeMins == AsrTotalTimeMins-1)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        int cdd = SalahCountDownStart - second();
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Asr", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text(cdd, rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("seconds", rtpanex, rtpaney+y(300));
-      }
-
-      // Maghrib //
-      if (h>= 12 && (CurrentTotalTimeMins >= MaghribTotalTimeMins-LargeCountDown && CurrentTotalTimeMins < MaghribTotalTimeMins-1)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Maghrib", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text((MaghribTotalTimeMins-CurrentTotalTimeMins), rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("minutes", rtpanex, rtpaney+y(300));
-      }
-      if (h>= 12 && (CurrentTotalTimeMins == MaghribTotalTimeMins-1)) {
-        //println("In Maghrib Countdwn");
-        //background(maghribcountdown);
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        int cdd = SalahCountDownStart - second();
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Maghrib", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text(cdd, rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("seconds", rtpanex, rtpaney+y(300));
-      }
-
-      // Isha //
-      if (h>= 12 && (CurrentTotalTimeMins >= IshaTotalTimeMins-LargeCountDown && CurrentTotalTimeMins < IshaTotalTimeMins-1)) {
-        //print("Isha Large CountDown ");
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Isha", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text((IshaTotalTimeMins-CurrentTotalTimeMins), rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("minutes", rtpanex, rtpaney+y(300));
-      }
-      if (h>= 12 && (CurrentTotalTimeMins == IshaTotalTimeMins-1)) {
-        //println("In Isha Countdwn");
-        //background(countdown);
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        int cdd = SalahCountDownStart - second();
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("Time to Isha", rtpanex, rtpaney-y(800));
-        textFont(LargeCountDownFont);
-        textAlign(CENTER);
-        text(cdd, rtpanex, rtpaney);
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("seconds", rtpanex, rtpaney+y(300));
-      }
-
-
-
-      // *** SALAH IN PROGRESS CODE
-      if (h<12 && (CurrentTotalTimeMins >= FajrTotalTimeMins) && (CurrentTotalTimeMins < FajrSalahInProgressOffset)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahName);
-        textAlign(CENTER);
-        textSize(x(600));
-        text("Fajr", rtpanex, rtpaney-y(250));
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("in progress", rtpanex, rtpaney);
-      }
-
-      //Sunrise
-      if (h<12 && (CurrentTotalTimeMins >= SunriseTotalTimeMins) && (CurrentTotalTimeMins < SunriseOffset)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahName);
-        textAlign(CENTER);
-        textSize(x(600));
-        text("Sunrise", rtpanex, rtpaney-y(250));
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text(Sunrise, rtpanex, rtpaney);
-      }
-
-
-      if (h>= 12 && (CurrentTotalTimeMins >= DhuhrTotalTimeMins) && (CurrentTotalTimeMins < DhuhrSalahInProgressOffset) && (Day.equals("Fri") == false)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahName);
-        textAlign(CENTER);
-        textSize(x(350));
-        text("Dhuhr", rtpanex, rtpaney-y(200));
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("in progress", rtpanex, rtpaney);
-      }
-
-      // Jummuah Day show the static background for JummahLenghthMin and no countdown
-      if (h>=12 && (CurrentTotalTimeMins >= JummahTotalTimeMins) && (CurrentTotalTimeMins <JummahInProgressOffset) && (Day.equals("Fri") == true)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahName);
-        textAlign(CENTER);
-        textSize(x(300));
-        text("Jum'uah", rtpanex, rtpaney-y(300));
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("in progress", rtpanex, rtpaney-y(100));
-      }
-
-
-      if (h>=12 && (CurrentTotalTimeMins >= AsrTotalTimeMins) && (CurrentTotalTimeMins < AsrSalahInProgressOffset)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahName);
-        textAlign(CENTER);
-        textSize(x(600));
-        text("Asr", rtpanex, rtpaney-y(200));
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("in progress", rtpanex, rtpaney);
-      }
-
-      if (h>=12 && (CurrentTotalTimeMins >= MaghribTotalTimeMins) && (CurrentTotalTimeMins < MaghribSalahInProgressOffset)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahName);
-        textAlign(CENTER);
-        textSize(x(300));
-        text("Maghrib", rtpanex, rtpaney-y(300));
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("in progress", rtpanex, rtpaney-y(100));
-      }
-
-      if (h>=12 && (CurrentTotalTimeMins >= IshaTotalTimeMins) && (CurrentTotalTimeMins < IshaSalahInProgressOffset)) {
-        fill(rightpanecolour);
-        stroke(0);
-        rect(x(2400), y(400), x(1440), y(1760));
-        fill(255);
-        textFont(SalahName);
-        textAlign(CENTER);
-        textSize(x(600));
-        text("Isha", rtpanex, rtpaney-y(200));
-        textFont(SalahTimeFont);
-        textAlign(CENTER);
-        text("in progress", rtpanex, rtpaney);
-      }
-
-      // Display Sunrise and Jum'uah times in right pane
-      fill(0);
-      stroke(0);
-      rect(x(2400), y(1996), x(1440), y(164));
-      textAlign(CENTER);
-      textFont(TodaysDateFont);
-      fill(255);
-      text("Sunrise " + Sunrise + "  |  Jum'uah " + JummahTime, rtpanex, rtpaney+y(615));
-    } // iterate whilst todays date is the date in the file
-  } // iterate through file
+    // Display Sunrise and Jum'uah times in right pane
+    fill(0);
+    stroke(0);
+    rect(x(2400), y(1996), x(1440), y(164));
+    textAlign(CENTER);
+    textFont(TodaysDateFont);
+    fill(255);
+    text("Sunrise " + Sunrise + "  |  Jum'uah " + JummahTime, rtpanex, rtpaney+y(615));
+  } // iterate whilst todays date is the date in the file
 } // void draw()
 
 /**
-  Translates the value on the X axis
-*/
+ Translates the value on the X axis
+ */
 int x(int x) {
   return int(float(x) * xRatio);
 }
 
 /**
-  Translates the value on the Y axis
-*/
+ Translates the value on the Y axis
+ */
 int y(int y) {
   return int(float(y) * yRatio);
+}
+
+int salahTimeInMinutes(String timeInString, int hoursOffset, boolean isDhuhrORJumuah) {
+  String[] timeArray = split(timeInString, ':');
+  if (isDhuhrORJumuah) {
+    int hour = parseInt(timeArray[0]);
+    hoursOffset = hour<=10?12:0;
+  }
+
+  return (((parseInt(timeArray[0])+hoursOffset)*60) +  parseInt(timeArray[1]));
+}
+
+Times getTimesFor(String name, String colJamah, String colStart1, String colStart2, TableRow row, TableRow nextRow, int CurrentTotalTimeMins, int hoursOffset, boolean isDhuhrORJumuah) {
+  String jamah = row.getString(colJamah);
+  String start1 = row.getString(colStart1);
+  String start2 = colStart2!=null?row.getString(colStart2):"";
+  int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
+
+  if (CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) {
+    //Show tomorrow's salah time
+    jamah = nextRow.getString(colJamah);
+    jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
+    start1 = nextRow.getString(colStart1);
+    start2 = colStart2!=null?nextRow.getString(colStart2):"";
+  }
+
+  return new Times(name, jamah, start1, start2, jamahTimeInMinutes, salahTimeInMinutes(start1, hoursOffset, isDhuhrORJumuah));
+}
+
+void show60SecondsTimerFor(Times prayer) {
+  showTimerFor("Time to "+prayer.name, SalahCountDownStart - second(), "seconds");
+}
+
+void showMinutesTimerFor(Times prayer, int currentTotalTimeMins) {
+  fill(currentTotalTimeMins);
+  showTimerFor("Time to "+prayer.name, prayer.jamahTimeInMinutes-currentTotalTimeMins, "minutes");
+}
+
+void showTimerFor(String text, int amount, String unit) {
+  fill(rightpanecolour);
+  stroke(0);
+  rect(x(2400), y(400), x(1440), y(1760));
+  fill(255);
+  textFont(SalahTimeFont);
+  textAlign(CENTER);
+  text(text, rtpanex, rtpaney-y(800));
+  textFont(LargeCountDownFont);
+  textAlign(CENTER);
+  text(amount, rtpanex, rtpaney+y(200));
+  textFont(SalahTimeFont);
+  textAlign(CENTER);
+  text(unit, rtpanex, rtpaney+y(450));
+}
+
+void showPrayerInProgressFor(String salahName) {
+  fill(rightpanecolour);
+  stroke(0);
+  rect(x(2400), y(400), x(1440), y(1760));
+  fill(255);
+  textFont(SalahNameFont);
+  textAlign(CENTER);
+  textSize(x(300));
+  text(salahName, rtpanex, rtpaney-y(300));
+  textFont(SalahTimeFont);
+  textAlign(CENTER);
+  text("in progress", rtpanex, rtpaney+y(100));
+}
+
+class Times {
+  String name;
+  String jamahTime;
+  String startTime1;
+  String startTime2;
+  int jamahTimeInMinutes;
+  int startTimeInMinutes;
+
+  Times(String name, String jamahTime, String startTime1, String startTime2, int jamahTimeInMinutes, int startTimeInMInutes) {
+    this.name = name;
+    this.jamahTime = jamahTime;
+    this.startTime1 = startTime1;
+    this.startTime2 = startTime2;
+    this.jamahTimeInMinutes = jamahTimeInMinutes;
+    this.startTimeInMinutes = startTimeInMInutes;
+  }
 }

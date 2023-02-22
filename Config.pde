@@ -24,3 +24,6 @@ int KarahatTimeOffset = 20;
 
 // Number of mins for Sunrise Notification
 int SunriseOffset = 10;
+
+// Show next day's salah time after current time is today's Jamah Time + NextDayTriggerInMinutes. 
+int NextDayTriggerInMinutes = 5;
