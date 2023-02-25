@@ -440,7 +440,7 @@ void showPrayerInProgressFor(String salahName) {
   text(salahName, rtpanex, rtpaney-y(300));
   textFont(SalahTimeFont);
   textAlign(CENTER);
-  text("in progress", rtpanex, rtpaney+y(100));
+  text("in progress", rtpanex, rtpaney-y(50));
 }
 
 class Times {
