@@ -177,7 +177,7 @@ void draw() {
 
   FullTodaysDate = (TodaysDate + " " + str(yr));
   CurrentTotalTimeMins = h*60 + mi;
-  
+
   int rowNum = row.getInt("RowNum");
   int nextRowNum = rowNum+1;
   if (nextRowNum > table.getRowCount()) { // If today is last day of the year, next day would be 1st Jan.
@@ -199,9 +199,10 @@ void draw() {
   int KarahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
 
   // Hijri Date
-  String HijriDate = row.getString("Hijri Date");
-  String HijriMonth = row.getString("Hijri Month");
-  String HijriYear = row.getString("Hijri Year");
+  TableRow hiriDateRow = CurrentTotalTimeMins < maghrib.startTimeInMinutes ? row : nextRow;
+  String HijriDate = hiriDateRow.getString("Hijri Date");
+  String HijriMonth = hiriDateRow.getString("Hijri Month");
+  String HijriYear = hiriDateRow.getString("Hijri Year");
   //String FullTodaysDateWithHijri = "";
 
   // Create Date to display which is Gregoran and Hijri Date
