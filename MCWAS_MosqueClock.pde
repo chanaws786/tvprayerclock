@@ -65,7 +65,7 @@ void setup() {
   Calendar c = Calendar.getInstance();
   dayOfWeek = c.get(Calendar.DAY_OF_WEEK);
   // Load the timetable file
-  table = loadTable("data/Prayer Timetable.csv", "header");
+  table = loadTable("data/mcwas-tv-timetable.csv", "header");
 }
 
 void draw() {
