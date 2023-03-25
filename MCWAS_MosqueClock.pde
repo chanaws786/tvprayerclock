@@ -187,15 +187,14 @@ void draw() {
   TableRow nextRow = table.getRow(nextRowNum-1);
   String Date = row.getString("Date");
   String Day = row.getString("Day");
-  String Sunrise = row.getString("Sunrise");
 
   Times fajr = getTimesFor("Fajr", "Fajr Jamah", "Fajr Begins", null, row, nextRow, CurrentTotalTimeMins, 0, false);
+  Times sunrise = getTimesFor("Sunrise", "Sunrise", "Sunrise", null, row, nextRow, CurrentTotalTimeMins, 0, false);
   Times dhuhr = getTimesFor("Dhuhr", "Dhuhr Jamah", "Dhuhr Begins", null, row, nextRow, CurrentTotalTimeMins, 0, true);
   Times asr = getTimesFor("Asr", "Asr Jamah", "Mithl 1", "Mithl 2", row, nextRow, CurrentTotalTimeMins, 12, false);
   Times maghrib = getTimesFor("Maghrib", "Maghrib Jamah", "Maghrib Begins", null, row, nextRow, CurrentTotalTimeMins, 12, false);
   Times isha = getTimesFor("Isha", "Isha Jamah", "Isha Begins", null, row, nextRow, CurrentTotalTimeMins, 12, false);
 
-  int SunriseTotalTimeMins = salahTimeInMinutes(Sunrise, 0, false);
   int KarahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
 
   // Hijri Date
@@ -339,7 +338,7 @@ void draw() {
     // In Progress
     else if (CurrentTotalTimeMins >= fajr.jamahTimeInMinutes && CurrentTotalTimeMins < (fajr.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(fajr.name);
-    } else if (CurrentTotalTimeMins >= SunriseTotalTimeMins && CurrentTotalTimeMins < (SunriseTotalTimeMins+SunriseOffset)) {
+    } else if (CurrentTotalTimeMins >= sunrise.jamahTimeInMinutes && CurrentTotalTimeMins < (sunrise.jamahTimeInMinutes+SunriseOffset)) {
       showPrayerInProgressFor("Sunrise");
     } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes + SalahInProgressOffset) && !Day.equals("Fri")) {
       showPrayerInProgressFor(dhuhr.name);
@@ -360,7 +359,7 @@ void draw() {
     textAlign(CENTER);
     textFont(TodaysDateFont);
     fill(255);
-    text("Sunrise " + Sunrise + "  |  Jum'uah " + JummahTime, rtpanex, rtpaney+y(615));
+    text("Sunrise " + sunrise.jamahTime + "  |  Jum'uah " + JummahTime, rtpanex, rtpaney+y(615));
   } // iterate whilst todays date is the date in the file
 } // void draw()
 
