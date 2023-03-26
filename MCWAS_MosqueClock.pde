@@ -396,7 +396,6 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   if (CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) {
     //Show tomorrow's salah time
     jamah = nextRow.getString(colJamah);
-    jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
     start1 = nextRow.getString(colStart1);
     start2 = colStart2!=null?nextRow.getString(colStart2):"";
   }
