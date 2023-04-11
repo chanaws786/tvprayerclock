@@ -230,7 +230,7 @@ void draw() {
 
     String[] JummahArray = split(JummahTime, ':');
     int JummahHrs = parseInt(JummahArray[0]);
-    int JummahMin = parseInt(JummahArray[1]);
+    int JummahMin = parseInt(split(JummahArray[1], '/')[0]);
     int JummahTotalTimeMins = JummahHrs<12?(JummahHrs+12)*60 + JummahMin:JummahHrs*60 + JummahMin;
 
     // Salah Text Allignment
