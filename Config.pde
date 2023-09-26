@@ -4,9 +4,6 @@ color backgroundcolor = #165D42;
 // Rightpane Color
 color rightpanecolour = #5D1631;
 
-// Jumuah Time 
-String JummahTime = "1:30";
-
 // Time in mins or Salah in progress to be displayed 
 int SalahInProgressOffset = 5;
 

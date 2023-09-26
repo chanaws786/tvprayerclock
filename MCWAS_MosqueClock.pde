@@ -1,9 +1,10 @@
+
 // Copyright Pilgrim Media Productions
 // Author Shiraz Chanawala
 
 import java.util.Calendar;
+
 int y;
-int dayOfWeek;
 int rtpanex = 3122;
 int rtpaney = 1500;
 PImage rightpane;
@@ -61,9 +62,6 @@ void setup() {
   LargeCountDownFont = createFont("font/AvenirNextLTPro-Regular.otf", x(900));
   SalahNameFont = createFont("font/AvenirNextLTPro-Regular.otf", x(600));
 
-  // Get the day of the week to determine if its Jumuah
-  Calendar c = Calendar.getInstance();
-  dayOfWeek = c.get(Calendar.DAY_OF_WEEK);
   // Load the timetable file
   table = loadTable("data/mcwas-tv-timetable.csv", "header");
 }
@@ -91,6 +89,10 @@ void draw() {
   rect(x(2400), y(400), x(1440), y(1760));
   image(rightpane, x(2400), y(400));
 
+  // Get the day of the week to determine if its Jumuah
+  Calendar c = Calendar.getInstance();
+  int dayOfWeek = c.get(Calendar.DAY_OF_WEEK);
+  
   //What is today - needs to be in dd mmm
   int mi=minute(), s=second(), h=hour();
   int hdisplay = h;
@@ -179,12 +181,10 @@ void draw() {
   CurrentTotalTimeMins = h*60 + mi;
 
   int rowNum = row.getInt("RowNum");
-  int nextRowNum = rowNum+1;
-  if (nextRowNum > table.getRowCount()) { // If today is last day of the year, next day would be 1st Jan.
-    nextRowNum = 0;
-  }
+  int nextRowIndex = rowNum % table.getRowCount(); //because rowIndex is always rowNum-1;
 
-  TableRow nextRow = table.getRow(nextRowNum-1);
+  TableRow nextRow = table.getRow(nextRowIndex);  
+
   String Date = row.getString("Date");
   String Day = row.getString("Day");
 
@@ -196,7 +196,16 @@ void draw() {
   Times isha = getTimesFor("Isha", "Isha Jamah", "Isha Begins", null, row, nextRow, CurrentTotalTimeMins, 12, false);
 
   int KarahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
-
+    
+  //   Calculate Jumuah time from the spreadsheet.
+  int ZeroBasedDayOfWeek = dayOfWeek-1;
+  int daysToAddToReachFriday = ZeroBasedDayOfWeek==6?6:(5-ZeroBasedDayOfWeek);
+  int jumuahRowIndex = (rowNum-1+daysToAddToReachFriday) % table.getRowCount(); // -1 because rowIndex is always rowNum-1;
+  int nextJumuahRowIndex = (jumuahRowIndex+7) % table.getRowCount();
+  TableRow jumuahRow = table.getRow(jumuahRowIndex);
+  TableRow nextJumuahRow = table.getRow(nextJumuahRowIndex);
+  String JummahTime = getJumuahTimes(jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, dayOfWeek==5);// 5 is Friday
+  
   // Hijri Date
   TableRow hiriDateRow = CurrentTotalTimeMins < maghrib.startTimeInMinutes ? row : nextRow;
   String HijriDate = hiriDateRow.getString("Hijri Date");
@@ -401,6 +410,18 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   }
 
   return new Times(name, jamah, start1, start2, jamahTimeInMinutes, salahTimeInMinutes(start1, hoursOffset, isDhuhrORJumuah));
+}
+
+String getJumuahTimes(TableRow jumuahRow, TableRow nextJumuahRow, int CurrentTotalTimeMins, int hoursOffset, boolean isTodayJumuah) {
+  String jamah = jumuahRow.getString("Dhuhr Jamah");
+  int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, true);
+
+  if (isTodayJumuah && CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) {
+    //Show next Jumuah's salah time
+    jamah = nextJumuahRow.getString("Dhuhr Jamah");
+  }
+
+  return jamah;
 }
 
 void show60SecondsTimerFor(Times prayer) {
