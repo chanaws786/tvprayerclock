@@ -42,7 +42,6 @@ void setup() {
 
   xRatio = float(viewWidth) / float(MAX_WIDTH);
   yRatio = float(viewHeight) / float(MAX_HEIGHT);
-  print (xRatio+ " " + yRatio);
   rtpanex = int(x(3122));
   rtpaney = int(y(1500));
   frameRate(2);
@@ -63,7 +62,24 @@ void setup() {
   SalahNameFont = createFont("font/AvenirNextLTPro-Regular.otf", x(600));
 
   // Load the timetable file
-  table = loadTable("data/mcwas-tv-timetable.csv", "header");
+    try {
+      if (fileUrl.length()>1) {
+        println("Loading table from "+fileUrl);
+        table = loadTable(fileUrl, "header,csv");
+      }
+      else {
+        println("fileUrl is empty. Loading local file.");
+        table = loadTable("data/mcwas-tv-timetable.csv", "header");
+      }
+    } catch (Exception e ) {
+      println(e);
+      table = null;
+    }    
+  
+    if (table==null) {
+      println("Loading from fileUrl failed.  Loading local file.");
+      table = loadTable("data/mcwas-tv-timetable.csv", "header");
+    }
 }
 
 void draw() {

@@ -24,3 +24,5 @@ int SunriseOffset = 10;
 
 // Show next day's salah time after current time is today's Jamah Time + NextDayTriggerInMinutes. 
 int NextDayTriggerInMinutes = 5;
+
+String fileUrl = ""; //"https://search-the-quran.com/mcwas/mcwas-tv-timetable.csv";
