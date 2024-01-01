@@ -69,7 +69,7 @@ void setup() {
       }
       else {
         println("fileUrl is empty. Loading local file.");
-        table = loadTable("data/mcwas-tv-timetable.csv", "header");
+        table = loadTable("data/mcwas-tv-timetable-2024.csv", "header");
       }
     } catch (Exception e ) {
       println(e);
@@ -78,7 +78,7 @@ void setup() {
   
     if (table==null) {
       println("Loading from fileUrl failed.  Loading local file.");
-      table = loadTable("data/mcwas-tv-timetable.csv", "header");
+      table = loadTable("data/mcwas-tv-timetable-2024.csv", "header");
     }
 }
 
