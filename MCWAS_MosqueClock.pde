@@ -221,7 +221,7 @@ void draw() {
   TableRow jumuahRow = table.getRow(jumuahRowIndex);
   TableRow nextJumuahRow = table.getRow(nextJumuahRowIndex);
   String JummahTime = getJumuahTimes(jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, dayOfWeek==5);// 5 is Friday
-  
+
   // Hijri Date
   TableRow hiriDateRow = CurrentTotalTimeMins < maghrib.startTimeInMinutes ? row : nextRow;
   String HijriDate = hiriDateRow.getString("Hijri Date");
@@ -384,7 +384,7 @@ void draw() {
     textAlign(CENTER);
     textFont(TodaysDateFont);
     fill(255);
-    text("Sunrise " + sunrise.jamahTime + "  |  Jum'uah " + JummahTime, rtpanex, rtpaney+y(615));
+    text("Sunrise " + sunrise.jamahTime + "  |  Jum'uah " + JummahTime , rtpanex, rtpaney+y(615));
   } // iterate whilst todays date is the date in the file
 } // void draw()
 
