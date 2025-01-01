@@ -8,6 +8,7 @@ int y;
 int rtpanex = 3122;
 int rtpaney = 1500;
 PImage rightpane;
+PImage leftBottomPane;
 PImage logo;
 int viewWidth;
 int viewHeight;
@@ -46,10 +47,12 @@ void setup() {
   rtpaney = int(y(1500));
   frameRate(2);
 
-  rightpane = loadImage("images/mosque_clock_right_pane.png");
+  rightpane = loadImage("images/mosque_clock_right_pane_whatsapp.png");
   rightpane.resize(x(rightpane.width), y(rightpane.height));
   logo = loadImage("images/mosque_logo.png");
   logo.resize(x(logo.width), y(logo.height));
+  leftBottomPane = loadImage("images/mosque_clock_left_bottom_pane_switch_off_old.png");
+  leftBottomPane.resize(x(leftBottomPane.width), y(leftBottomPane.height));
 
 
   TimeFont = createFont("font/AvenirNextLTPro-Regular.otf", x(300));
@@ -69,7 +72,7 @@ void setup() {
       }
       else {
         println("fileUrl is empty. Loading local file.");
-        table = loadTable("data/mcwas-tv-timetable-2024.csv", "header");
+        table = loadTable("data/mcwas-tv-timetable-2025.csv", "header");
       }
     } catch (Exception e ) {
       println(e);
@@ -78,7 +81,7 @@ void setup() {
   
     if (table==null) {
       println("Loading from fileUrl failed.  Loading local file.");
-      table = loadTable("data/mcwas-tv-timetable-2024.csv", "header");
+      table = loadTable("data/mcwas-tv-timetable-2025.csv", "header");
     }
 }
 
@@ -104,6 +107,7 @@ void draw() {
   stroke(0);
   rect(x(2400), y(400), x(1440), y(1760));
   image(rightpane, x(2400), y(400));
+  //image(leftBottomPane, x(400), y(2000));
 
   // Get the day of the week to determine if its Jumuah
   Calendar c = Calendar.getInstance();
@@ -327,7 +331,7 @@ void draw() {
     text(fajr.startTime1, stabx, snay);
     text(dhuhr.startTime1, stabx, snay+snay_gap);
     // Set Asr Begins Time - we need to show Mitl 1 and Mitl 2
-    text(asr.startTime1 + " / " + asr.startTime2, stabx, snay+2*snay_gap);
+    text(asr.startTime1 + "/" + asr.startTime2, stabx, snay+2*snay_gap);
     text(maghrib.startTime1, stabx, snay+3*snay_gap);
     text(isha.startTime1, stabx, snay+4*snay_gap);
 
@@ -384,7 +388,7 @@ void draw() {
     textAlign(CENTER);
     textFont(TodaysDateFont);
     fill(255);
-    text("Sunrise " + sunrise.jamahTime + "  |  Jum'uah " + JummahTime , rtpanex, rtpaney+y(615));
+    text("Sunrise " + sunrise.jamahTime + " | Jum'uah " + JummahTime , rtpanex, rtpaney+y(615));
   } // iterate whilst todays date is the date in the file
 } // void draw()
 
@@ -429,12 +433,12 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
 }
 
 String getJumuahTimes(TableRow jumuahRow, TableRow nextJumuahRow, int CurrentTotalTimeMins, int hoursOffset, boolean isTodayJumuah) {
-  String jamah = jumuahRow.getString("Dhuhr Jamah");
+  String jamah = jumuahRow.getString("Dhuhr Jamah").concat("/"+nextJumuahRow.getString("Jumuah2nd"));
   int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, true);
 
   if (isTodayJumuah && CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) {
     //Show next Jumuah's salah time
-    jamah = nextJumuahRow.getString("Dhuhr Jamah");
+    jamah = nextJumuahRow.getString("Dhuhr Jamah").concat("/"+nextJumuahRow.getString("Jumuah2nd"));
   }
 
   return jamah;
