@@ -263,11 +263,11 @@ void draw() {
     int JummahTotalTimeMins = JummahHrs<12?(JummahHrs+12)*60 + JummahMin:JummahHrs*60 + JummahMin;
 
     // Salah Text Allignment
-    int snax = x(156);
+    int snax = x(50); //Salah name row
     int snay = y(848);
     int snay_gap = y(280);
-    int stabx = x(950);
-    int stasx = x(2300);
+    int stabx = x(800); //Begins row
+    int stasx = x(2300); //Jamat row
 
 
     //*** Debug - uncomment if required
