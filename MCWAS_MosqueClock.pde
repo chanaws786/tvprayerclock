@@ -207,11 +207,6 @@ void draw() {
 
   String Date = row.getString("Date");
   String Day = row.getString("Day");
-  
-  //System.out.println("I am row no "+ row);
-  //System.out.println("I am nextRow no "+ nextRow);
-  //  System.out.println("I am Date  "+ Date);
-  //  System.out.println("I am Day  "+ Day);
     
     //   Calculate Jumuah time from the spreadsheet.
   int ZeroBasedDayOfWeek = dayOfWeek-1;
@@ -223,25 +218,14 @@ void draw() {
 
   Times fajr = getTimesFor("Fajr", "Fajr Jamah", "Fajr Begins", null, row, nextRow, CurrentTotalTimeMins, 0, false);
   Times sunrise = getTimesFor("Sunrise", "Sunrise", "Sunrise", null, row, nextRow, CurrentTotalTimeMins, 0, false);
-  Times dhuhr = getTimesFor("Dhuhr", "Dhuhr Jamah", "Dhuhr Begins", null, row, nextRow, CurrentTotalTimeMins, 0, false);
-
+  Times dhuhr = getTimesFor("Dhuhr", "Dhuhr Jamah", "Dhuhr Begins", null, row, nextRow, CurrentTotalTimeMins, 0, true);
   Times asr = getTimesFor("Asr", "Asr Jamah", "Mithl 1", "Mithl 2", row, nextRow, CurrentTotalTimeMins, 12, false);
   Times maghrib = getTimesFor("Maghrib", "Maghrib Jamah","Maghrib Begins", null, row, nextRow, CurrentTotalTimeMins, 12, false);
   Times isha = getTimesFor("Isha", "Isha Jamah", "Isha Begins", null, row, nextRow, CurrentTotalTimeMins, 12, false);
-  
-  Times jummah = getTimesFor("Dhuhr", "Dhuhr Jamah", "Dhuhr Begins", null, jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, true);
+  Times jummah = getTimesFor("Dhuhr", "Dhuhr Jamah", "Dhuhr Begins", null, jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, false);
 
   int KarahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
     
-  //   Calculate Jumuah time from the spreadsheet.
-  //int ZeroBasedDayOfWeek = dayOfWeek-1;
-  //int daysToAddToReachFriday = ZeroBasedDayOfWeek==6?6:(5-ZeroBasedDayOfWeek);
-  //int jumuahRowIndex = (rowNum-1+daysToAddToReachFriday) % table.getRowCount(); // -1 because rowIndex is always rowNum-1;
-  //int nextJumuahRowIndex = (jumuahRowIndex+7) % table.getRowCount();
-  //TableRow jumuahRow = table.getRow(jumuahRowIndex);
-  //TableRow nextJumuahRow = table.getRow(nextJumuahRowIndex);
-  //String JummahTime = getJumuahTimes(jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, dayOfWeek==6);// 5 is Friday
-
   // Hijri Date
   TableRow hiriDateRow = CurrentTotalTimeMins < maghrib.startTimeInMinutes ? row : nextRow;
   String HijriDate = hiriDateRow.getString("Hijri Date");
@@ -271,12 +255,6 @@ void draw() {
     textAlign(RIGHT);
     textFont(TodaysDateFont);
     text(FullHijriDate, x(2350), y(320));
-
-
-    //String[] JummahArray = split(JummahTime, ':');
-    //int JummahHrs = parseInt(JummahArray[0]);
-    //int JummahMin = parseInt(split(JummahArray[1], '/')[0]);
-    //int JummahTotalTimeMins = JummahHrs<12?(JummahHrs+12)*60 + JummahMin:JummahHrs*60 + JummahMin;
 
     // Salah Text Allignment
     int snax = x(50); //Salah name row
@@ -330,16 +308,11 @@ void draw() {
     text(fajr.jamahTime, stasx, snay);
 
     // Set Dhur Time - Adjust for Jumamh
-    //if (Day.equals("Fri") == true) {
-      //text(jummah.jummahTime, stasx, snay+snay_gap);
-    //} else {
-      System.out.println("Which day is it - "+ row.getString("Day") + " " + (CurrentTotalTimeMins >= (dhuhr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes-1)));
-      System.out.println("CurrentTotalTimeMins - "+ row.getString("Day") + " " + (CurrentTotalTimeMins) );
-      System.out.println("(dhuhr.jamahTimeInMinutes-LargeCountDown - "+ row.getString("Day") + " " + (dhuhr.jamahTimeInMinutes-LargeCountDown) );
-      System.out.println("dhuhr.jamahTimeInMinutes-1 - "+ row.getString("Day") + " " + (dhuhr.jamahTimeInMinutes-1) );
-      System.out.println("Which date is it - "+ row.getString("Date") + " " + (CurrentTotalTimeMins >= (dhuhr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes-1) && !Day.equals("Fri")) );  
+    if (Day.equals("Fri") == true) {
+      text(jummah.jummahTime, stasx, snay+snay_gap);
+    } else {
       text(dhuhr.jamahTime, stasx, snay+snay_gap);
-    //}
+    }
 
     text(asr.jamahTime, stasx, snay+2*snay_gap);
     text(maghrib.jamahTime, stasx, snay+3*snay_gap);
@@ -393,8 +366,9 @@ void draw() {
     } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes + SalahInProgressOffset) && !Day.equals("Fri")) {
       showPrayerInProgressFor(dhuhr.name);
     //} else if (CurrentTotalTimeMins >= JummahTotalTimeMins && CurrentTotalTimeMins <(JummahTotalTimeMins + JummahLenghthMin) && Day.equals("Fri")) {
-    //} else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(dhuhr.jamahTimeInMinutes + JummahLenghthMin) && Day.equals("Fri")) {  
-      //showPrayerInProgressFor("Jum'uah");
+    //} else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(jummah.jamahTimeInMinutes + JummahLenghthMin) && Day.equals("Fri")) {        
+    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(jummah.jamahTimeInMinutes + JummahLenghthMin) && Day.equals("Fri")) {  
+      showPrayerInProgressFor("Jum'uah");
     } else if (CurrentTotalTimeMins >= asr.jamahTimeInMinutes && CurrentTotalTimeMins < (asr.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(asr.name);
     } else if (CurrentTotalTimeMins >= maghrib.jamahTimeInMinutes && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes + SalahInProgressOffset)) {
@@ -444,8 +418,15 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   String jummah = row.getString(colJamah);
   String start1 = row.getString(colStart1);
   String start2 = colStart2!=null?row.getString(colStart2):"";
+  if (row.getString("Day").equals("Fri")) {
+    isDhuhrORJumuah = true;
+    System.out.println("isDhuhrORJumuah  "+ isDhuhrORJumuah);    
+    System.out.println("start1  "+ start1);
+    System.out.println("start2  "+ start2);
+    //System.out.println("jamahTimeInMinutes  "+ jamahTimeInMinutes);
+  }
   int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
-  //if (dayofWeek == 6){}
+  System.out.println("jamahTimeInMinutes  "+ jamahTimeInMinutes);
 
   if (CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) {
     //Show tomorrow's salah time  
@@ -456,20 +437,6 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
 
   return new Times(name, jamah, jummah, start1, start2, jamahTimeInMinutes, salahTimeInMinutes(start1, hoursOffset, isDhuhrORJumuah));
 }
-
-//String getJumuahTimes(TableRow jumuahRow, TableRow nextJumuahRow, int CurrentTotalTimeMins, int hoursOffset, boolean isTodayJumuah) {
-//  String jamah = jumuahRow.getString("Dhuhr Jamah");
-//  //.concat("/"+nextJumuahRow.getString("Jumuah2nd"));
-//  int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, true);
-
-//  if (isTodayJumuah && CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) {
-//    //Show next Jumuah's salah time
-//    jamah = nextJumuahRow.getString("Dhuhr Jamah");
-//    //.concat("/"+nextJumuahRow.getString("Jumuah2nd"));
-//  }
-
-//  return jamah;
-//}
 
 void show60SecondsTimerFor(Times prayer) {
   showTimerFor("Time to "+prayer.name, SalahCountDownStart - second(), "seconds");
