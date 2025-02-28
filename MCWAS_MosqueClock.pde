@@ -437,7 +437,7 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   }
 
   //Set next jummah's salah time and show dhur for saturday
-  if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == 6 && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins) && jamah.contains("/") && hour() >= 15){
+  if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == 6 && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins)){
     jamah = nextRow.getString(colJamah);
   }   
 
