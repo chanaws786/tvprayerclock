@@ -127,7 +127,9 @@ void draw() {
   int dayOfWeek = c.get(Calendar.DAY_OF_WEEK);
   
   //What is today - needs to be in dd mmm
-  int mi=minute(), s=second(), h=hour();
+  int h=hour();
+  int mi=minute();
+  int s=second();
   int hdisplay = h;
   int d = day();
   int m = month();
@@ -301,9 +303,9 @@ void draw() {
     textFont(SalahTimeFont);
     textAlign(LEFT);
     text("Fajr", snax, snay);
-
+    
     // Substitute Jummah for Dhuhr on Fridays
-    if (Day.equals("Fri") == true && CurrentTotalTimeMins <= 825) {
+   if ((dayOfWeek == 5 && h >= 15) || (dayOfWeek == 6 && h < 15)) {   
       text("Jum'uah", snax, snay+snay_gap);
     } else {
       text("Dhuhr", snax, snay+snay_gap);
@@ -423,7 +425,7 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
 
   //Set jummah's split time to show in progress    
-  if (row.getString("normal_day").equals("Fri") == true) {
+  if (row.getString("normal_day").equals("Fri") == true){ 
     if (jamah.contains("/")) {
       String[] jamahs =  split(jamah,"/");
       if ((salahTimeInMinutes(jamahs[0], hoursOffset, true)+JummahLenghthMin)>=CurrentTotalTimeMins) {
@@ -435,10 +437,7 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   }
 
   //Set next jummah's salah time and show dhur for saturday
-  if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == 6 && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins) && jamah.contains("12:30/1:30")){
-    System.out.println("CurrentTotalTimeMins1 "+CurrentTotalTimeMins);
-    System.out.println("jamahTimeInMinutes1 "+(jamahTimeInMinutes+JummahLenghthMin));
-
+  if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == 6 && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins) && jamah.contains("/") && hour() >= 15){
     jamah = nextRow.getString(colJamah);
   }   
 
