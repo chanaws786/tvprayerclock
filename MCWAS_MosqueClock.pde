@@ -346,7 +346,7 @@ void draw() {
       show60SecondsTimerFor(dhuhr);
     } else if (CurrentTotalTimeMins == asr.jamahTimeInMinutes-1) {
       show60SecondsTimerFor(asr);
-    } else if (CurrentTotalTimeMins == maghrib.jamahTimeInMinutes-1) {
+    } else if (CurrentTotalTimeMins == maghrib.startTimeInMinutes-1) {
       show60SecondsTimerFor(maghrib);
     } else if (CurrentTotalTimeMins == isha.jamahTimeInMinutes-1) {
       show60SecondsTimerFor(isha);
@@ -438,8 +438,10 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
 
   //Set next jummah's salah time and show dhur for saturday
   if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == 6 && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins)){
+    start1 = nextRow.getString(colStart1);
+    start2 = colStart2!=null?nextRow.getString(colStart2):"";
     jamah = nextRow.getString(colJamah);
-  }   
+  }
 
   //Show tomorrow's salah time   
   if ((CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) && !row.getString("normal_day").equals("Fri")) {
@@ -457,7 +459,12 @@ void show60SecondsTimerFor(Times prayer) {
 
 void showMinutesTimerFor(Times prayer, int currentTotalTimeMins) {
   fill(currentTotalTimeMins);
-  showTimerFor("Time to "+prayer.name, prayer.jamahTimeInMinutes-currentTotalTimeMins, "minutes");
+  if (prayer.name == "Maghrib") {
+    showTimerFor("Time to "+prayer.name, prayer.startTimeInMinutes-currentTotalTimeMins, "minutes");         
+  } else {
+    showTimerFor("Time to "+prayer.name, prayer.jamahTimeInMinutes-currentTotalTimeMins, "minutes");
+  }
+
 }
 
 void showTimerFor(String text, int amount, String unit) {
