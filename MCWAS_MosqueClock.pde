@@ -305,7 +305,8 @@ void draw() {
     text("Fajr", snax, snay);
     
     // Substitute Jummah for Dhuhr on Fridays
-   if ((dayOfWeek == 5 && h >= 15) || (dayOfWeek == 6 && h < 15)) {   
+  
+   if ((dayOfWeek == 5 && h >= 14) || (dayOfWeek == 6 && h < 15)) { 
       text("Jum'uah", snax, snay+snay_gap);
     } else {
       text("Dhuhr", snax, snay+snay_gap);
