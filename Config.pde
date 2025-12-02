@@ -25,5 +25,6 @@ int SunriseOffset = 10;
 // Show next day's salah time after current time is today's Jamah Time + NextDayTriggerInMinutes. 
 int NextDayTriggerInMinutes = 5;
 
-String fileUrl = "~/tvprayerclock/data/mcwas_prayer_timetable_2025.csv"; //"https://search-the-quran.com/mcwas/mcwas-tv-timetable.csv";
-//String fileUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vScD2DvjF8wwI7Db2BY-O8GVJ72u9dzAJcmBrqlAWD3Q_DM2ltfHvbQiaW1szBqPv4nx64Cjw3wEEwa/pub?gid=1194767023&single=true&output=csv";
+//String fileUrl = "~/tvprayerclock/data/mcwas_prayer_timetable_2025.csv"; //"https://search-the-quran.com/mcwas/mcwas-tv-timetable.csv";
+//String fileUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yCyoT9XY7wE4xo1dbJHENZ8qEMBDYYB7sbaFYXCztX0FEscVCL5FA8x0KFKU6EkoV-qkQxaoGT4U/pub?gid=1089878008&single=true&output=csv"; //2025
+String fileUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRUHQj_oZRicrsZIdCA0yGwKdcPcJwf1wXDF1sH87n0Fljwk0c7yNy1AivZMTEfV_kg383oPcnn2NGa/pub?gid=1107244568&single=true&output=csv"; //2026
