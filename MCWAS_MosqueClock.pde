@@ -67,45 +67,14 @@ void setup() {
   SalahNameFont = createFont("font/AvenirNextLTPro-Regular.otf", x(600));
   
   reloadTable(); // Load the table initially
-  //loadGoogleSheetData();
 
-}
-
-void loadGoogleSheetData() {
-  try {
-    // Replace with your published Google Sheet URL
-    String url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yCyoT9XY7wE4xo1dbJHENZ8qEMBDYYB7sbaFYXCztX0FEscVCL5FA8x0KFKU6EkoV-qkQxaoGT4U/pub?gid=1089878008&single=true&output=csv";
-    
-    println("Loading data from Google Sheets...");
-    googleSheetData = loadTable(url, "header, csv");
-    
-    if (googleSheetData == null) {
-      println("ERROR: Failed to load data from Google Sheets");
-      return;
-    }
-    
-    println("Successfully loaded " + googleSheetData.getRowCount() + " rows");
-    println("Columns: " + googleSheetData.getColumnCount());
-    
-    // Display column names
-    printArray(googleSheetData.getColumnTitles());
-    
-    // Print first few rows to verify
-    for (int i = 0; i < min(3, googleSheetData.getRowCount()); i++) {
-      TableRow row = googleSheetData.getRow(i);
-      println("Row " + i + ": " + row.getString(0) + ", " + row.getString(1));
-    }
-    
-  } catch (Exception e) {
-    println("ERROR: " + e.getMessage());
-  }
 }
 
 // Load the timetable file
 void reloadTable(){
   try {
     if (fileUrl.length()>1) {
-      println("Loading table from "+fileUrl + " at " +getCurrentTime() );
+      //println("Loading table from "+fileUrl + " at " +getCurrentTime() );
       table = loadTable(fileUrl, "header, csv");
     } else {
       println("fileUrl is empty. Loading local file.");
