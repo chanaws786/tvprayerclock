@@ -78,7 +78,13 @@ void reloadTable(){
       table = loadTable(fileUrl, "header, csv");
     } else {
       println("fileUrl is empty. Loading local file.");
-      table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
+      if (str(year()) == "2025")
+      {
+        table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
+      } else
+      {
+        table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
+      }      
     }
   } catch (Exception e ) {
     println("Exception caught : "+e.getMessage());
