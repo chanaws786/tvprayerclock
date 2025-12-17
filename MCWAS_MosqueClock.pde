@@ -375,7 +375,7 @@ void draw() {
     }
 
     // In Progress
-    else if (CurrentTotalTimeMins >= fajr.jamahTimeInMinutes && CurrentTotalTimeMins < (fajr.jamahTimeInMinutes + SalahInProgressOffset)) {
+    else if (CurrentTotalTimeMins >= fajr.jamahTimeInMinutes && CurrentTotalTimeMins < (fajr.jamahTimeInMinutes + TenMinSalahInProgressOffset)) {
       showPrayerInProgressFor(fajr.name);
     } else if (CurrentTotalTimeMins >= sunrise.jamahTimeInMinutes && CurrentTotalTimeMins < (sunrise.jamahTimeInMinutes+SunriseOffset)) {
       showPrayerInProgressFor("sunrise");
@@ -385,9 +385,9 @@ void draw() {
       showPrayerInProgressFor("Jum'uah");   
     } else if (CurrentTotalTimeMins >= asr.jamahTimeInMinutes && CurrentTotalTimeMins < (asr.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(asr.name);
-    } else if (CurrentTotalTimeMins >= maghrib.jamahTimeInMinutes && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes + SalahInProgressOffset)) {
+    } else if (CurrentTotalTimeMins >= maghrib.jamahTimeInMinutes && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes + TenMinSalahInProgressOffset)) {
       showPrayerInProgressFor(maghrib.name);
-    } else if (CurrentTotalTimeMins >= isha.jamahTimeInMinutes && CurrentTotalTimeMins < (isha.jamahTimeInMinutes + SalahInProgressOffset)) {
+    } else if (CurrentTotalTimeMins >= isha.jamahTimeInMinutes && CurrentTotalTimeMins < (isha.jamahTimeInMinutes + TenMinSalahInProgressOffset)) {
       showPrayerInProgressFor(isha.name);
     }
 

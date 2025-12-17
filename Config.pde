@@ -5,13 +5,14 @@ color backgroundcolor = #165D42;
 color rightpanecolour = #5D1631;
 
 // Time in mins or Salah in progress to be displayed 
-int SalahInProgressOffset = 5;
+int TenMinSalahInProgressOffset = 10;
+int SalahInProgressOffset = 7;
 
 // Number of seconds for Salah to start 
 int SalahCountDownStart = 60;
 
 // Time in mins for Jum'uah in progress to be displayed 
-int JummahLenghthMin = 15;
+int JummahLenghthMin = 25;
 
 // Number of mins for the large countdown to start before Jamaat time 
 int LargeCountDown = 20;
