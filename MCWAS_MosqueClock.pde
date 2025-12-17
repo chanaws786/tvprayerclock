@@ -79,10 +79,10 @@ void reloadTable(){
       println("fileUrl is empty. Loading local file.");
       if (str(year()) == "2025")
       {
-        table = loadTable("data/mcwas_prayer_timetable_current_year.csv", "header");
+        table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
       } else
       {
-        table = loadTable("data/mcwas_prayer_timetable_next_year.csv", "header");
+        table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
       }      
     }
   } catch (Exception e ) {
@@ -92,7 +92,7 @@ void reloadTable(){
   
   if (table==null) {
     println("Loading from fileUrl failed.  Loading local file.");
-    table = loadTable("data/mcwas_prayer_timetable_current_year.csv", "header");
+    table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
   }
 }
 
