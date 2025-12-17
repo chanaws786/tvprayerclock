@@ -28,7 +28,8 @@ PFont CountDownFont;
 PFont LargeCountDownFont;
 PFont SalahNameFont;
 long lastReloadTime = 0;
-int reloadInterval = 60 * 60 * 1000; // 1 hour in milliseconds
+int reloadInterval = 60 * 1000; // 1 min in milliseconds
+int reloadInterval1 = 60 * 60 * 1000; // 1 hour in milliseconds
 
 void setup() {
 
@@ -72,20 +73,26 @@ void setup() {
 void reloadTable(){
   try {
     if (fileUrl.length()>1) {
-      println("Loading table from "+fileUrl + " at " +getCurrentTime() );
-      table = loadTable(fileUrl, "header,csv");
+      //println("Loading table from "+fileUrl + " at " +getCurrentTime() );
+      table = loadTable(fileUrl, "header, csv");
     } else {
       println("fileUrl is empty. Loading local file.");
-      table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
+      if (str(year()) == "2025")
+      {
+        table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
+      } else
+      {
+        table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
+      }      
     }
   } catch (Exception e ) {
-    println(e);
+    println("Exception caught : "+e.getMessage());
     table = null;
   }
   
   if (table==null) {
     println("Loading from fileUrl failed.  Loading local file.");
-    table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
+    table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
   }
 }
 
@@ -202,7 +209,7 @@ void draw() {
   String dsi = str(d);
   //String msi = str(mmm);
   TodaysDate = (dsi + " " + mmm);
-  TableRow row = table.findRow(TodaysDate, "normal_date");
+    TableRow row = table.findRow(TodaysDate, "normal_date");
   if (row==null) {
     // Error Message
     fill(255);
