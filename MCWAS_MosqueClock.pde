@@ -31,11 +31,6 @@ int reloadInterval = 5 * 60 * 1000; // 5 min in milliseconds
 volatile boolean isReloading = false;
 Table backupTable;
 
-// Ramadan grey screen tracking
-boolean isRamadan = false;
-long ramadanGreyScreenEndTime = 0;
-String lastEndedSalah = "";
-
 // Month names array for efficient lookup
 String[] MONTH_NAMES = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
@@ -131,11 +126,6 @@ String padTime(int value) {
 String getDataFilename() {
   int currentYear = year();
   return "data/mcwas_prayer_timetable_" + currentYear + ".csv";
-}
-
-// Helper function to check if current hijri month is Ramadan
-boolean isRamadanMonth(String hijriMonth) {
-  return hijriMonth != null && (hijriMonth.equalsIgnoreCase("Ramadan") || hijriMonth.equalsIgnoreCase("Ramadhan"));
 }
 
 // Helper function to load images with error handling
@@ -277,12 +267,7 @@ void draw() {
 
   // Always draw background first to prevent white screen
   stroke(0);
-  // Check if we should show grey screen (Ramadan after salah)
-  if (enableRamadanGreyScreen && isRamadan && millis() < ramadanGreyScreenEndTime) {
-    fill(128); // Grey color for Ramadan post-salah period
-  } else {
-    fill(backgroundcolor);
-  }
+  fill(backgroundcolor);
   rect(0, 0, viewWidth, viewHeight);
 
   if (millis() - lastReloadTime > reloadInterval){
@@ -321,14 +306,6 @@ void draw() {
   stroke(0);
   fill(0);
   rect(0, 0, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_TIME_BACKGROUND_HEIGHT));
-
-  // Ramadan grey screen indicator
-  if (enableRamadanGreyScreen && isRamadan && millis() < ramadanGreyScreenEndTime) {
-    fill(255);
-    textAlign(CENTER);
-    safeTextFont(TodaysDateFont);
-    text("Ramadan - " + lastEndedSalah + " ended", viewWidth/2, y(100));
-  }
 
   // Logo
   if (logo != null) {
@@ -457,9 +434,6 @@ void draw() {
   String HijriMonth = safeGetString(hiriDateRow, "hijri_month");
   String HijriYear = safeGetString(hiriDateRow, "hijri_year");
 
-  // Check if current month is Ramadan
-  isRamadan = isRamadanMonth(HijriMonth);
-
   // Create Date to display which is Gregoran and Hijri Date
   FullHijriDate = (HijriDate + " " + HijriMonth + " " + HijriYear);
 
@@ -573,46 +547,15 @@ void draw() {
     } else if (CurrentTotalTimeMins >= sunrise.jamahTimeInMinutes && CurrentTotalTimeMins < (sunrise.jamahTimeInMinutes+SunriseOffset)) {
       showPrayerInProgressFor("sunrise");
     } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes + SalahInProgressOffset) && !Day.equals(DAY_FRIDAY_NAME)) {
-      showPrayerInProgressFor(dhuhr.name);
-    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(dhuhr.jamahTimeInMinutes + JummahLenghthMin) && Day.equals(DAY_FRIDAY_NAME)) {
-      showPrayerInProgressFor("Jum'uah");
+      showPrayerInProgressFor(dhuhr.name);       
+    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(dhuhr.jamahTimeInMinutes + JummahLenghthMin) && Day.equals(DAY_FRIDAY_NAME)) {  
+      showPrayerInProgressFor("Jum'uah");   
     } else if (CurrentTotalTimeMins >= asr.jamahTimeInMinutes && CurrentTotalTimeMins < (asr.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(asr.name);
     } else if (CurrentTotalTimeMins >= maghrib.jamahTimeInMinutes && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(maghrib.name);
     } else if (CurrentTotalTimeMins >= isha.jamahTimeInMinutes && CurrentTotalTimeMins < (isha.jamahTimeInMinutes + TenMinSalahInProgressOffset)) {
       showPrayerInProgressFor(isha.name);
-    }
-
-    // Track salah end times for Ramadan grey screen
-    if (enableRamadanGreyScreen && isRamadan) {
-      long greyScreenDuration = ramadanGreyScreenDurationMinutes * 60 * 1000; // Convert minutes to milliseconds
-      // Check if salah just ended (first minute after in-progress period)
-      if (CurrentTotalTimeMins == fajr.jamahTimeInMinutes + TenMinSalahInProgressOffset) {
-        ramadanGreyScreenEndTime = millis() + greyScreenDuration;
-        lastEndedSalah = fajr.name;
-        println("Ramadan: " + fajr.name + " ended, grey screen for " + ramadanGreyScreenDurationMinutes + " minutes");
-      } else if (CurrentTotalTimeMins == dhuhr.jamahTimeInMinutes + SalahInProgressOffset && !Day.equals(DAY_FRIDAY_NAME)) {
-        ramadanGreyScreenEndTime = millis() + greyScreenDuration;
-        lastEndedSalah = dhuhr.name;
-        println("Ramadan: " + dhuhr.name + " ended, grey screen for " + ramadanGreyScreenDurationMinutes + " minutes");
-      } else if (CurrentTotalTimeMins == dhuhr.jamahTimeInMinutes + JummahLenghthMin && Day.equals(DAY_FRIDAY_NAME)) {
-        ramadanGreyScreenEndTime = millis() + greyScreenDuration;
-        lastEndedSalah = "Jum'uah";
-        println("Ramadan: Jum'uah ended, grey screen for " + ramadanGreyScreenDurationMinutes + " minutes");
-      } else if (CurrentTotalTimeMins == asr.jamahTimeInMinutes + SalahInProgressOffset) {
-        ramadanGreyScreenEndTime = millis() + greyScreenDuration;
-        lastEndedSalah = asr.name;
-        println("Ramadan: " + asr.name + " ended, grey screen for " + ramadanGreyScreenDurationMinutes + " minutes");
-      } else if (CurrentTotalTimeMins == maghrib.jamahTimeInMinutes + SalahInProgressOffset) {
-        ramadanGreyScreenEndTime = millis() + greyScreenDuration;
-        lastEndedSalah = maghrib.name;
-        println("Ramadan: " + maghrib.name + " ended, grey screen for " + ramadanGreyScreenDurationMinutes + " minutes");
-      } else if (CurrentTotalTimeMins == isha.jamahTimeInMinutes + TenMinSalahInProgressOffset) {
-        ramadanGreyScreenEndTime = millis() + greyScreenDuration;
-        lastEndedSalah = isha.name;
-        println("Ramadan: " + isha.name + " ended, grey screen for " + ramadanGreyScreenDurationMinutes + " minutes");
-      }
     }
 
     // Display Sunrise and Jum'uah times in right pane

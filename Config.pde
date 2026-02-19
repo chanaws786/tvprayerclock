@@ -23,12 +23,8 @@ int KarahatTimeOffset = 20;
 // Number of mins for Sunrise Notification
 int SunriseOffset = 10;
 
-// Show next day's salah time after current time is today's Jamah Time + NextDayTriggerInMinutes.
+// Show next day's salah time after current time is today's Jamah Time + NextDayTriggerInMinutes. 
 int NextDayTriggerInMinutes = 5;
-
-// Ramadan grey screen settings
-boolean enableRamadanGreyScreen = true; // Enable grey screen after salah during Ramadan
-int ramadanGreyScreenDurationMinutes = 60; // Duration in minutes for grey screen after salah
 
 //String fileUrl = "~/tvprayerclock/data/mcwas_prayer_timetable_2025.csv"; //"https://search-the-quran.com/mcwas/mcwas-tv-timetable.csv";
 String fileUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yCyoT9XY7wE4xo1dbJHENZ8qEMBDYYB7sbaFYXCztX0FEscVCL5FA8x0KFKU6EkoV-qkQxaoGT4U/pub?gid=1089878008&single=true&output=csv";
