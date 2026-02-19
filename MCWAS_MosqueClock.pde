@@ -31,6 +31,9 @@ int reloadInterval = 5 * 60 * 1000; // 5 min in milliseconds
 volatile boolean isReloading = false;
 Table backupTable;
 
+// Ramadan grey screen tracking
+boolean isRamadan = false;
+
 // Month names array for efficient lookup
 String[] MONTH_NAMES = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
@@ -126,6 +129,25 @@ String padTime(int value) {
 String getDataFilename() {
   int currentYear = year();
   return "data/mcwas_prayer_timetable_" + currentYear + ".csv";
+}
+
+// Helper function to check if current hijri month is Ramadan
+boolean isRamadanMonth(String hijriMonth) {
+  return hijriMonth != null && (hijriMonth.equalsIgnoreCase("Ramadan") || hijriMonth.equalsIgnoreCase("Ramadhan"));
+}
+
+// Helper function to check if current time is within Ramadan grey screen window (1:30am to 3:00am)
+boolean isRamadanGreyScreenTime() {
+  int currentHour = hour();
+  int currentMinute = minute();
+  int currentTotalMinutes = currentHour * 60 + currentMinute;
+
+  // 1:30am = 1 * 60 + 30 = 90 minutes
+  // 3:00am = 3 * 60 + 0 = 180 minutes
+  int startMinutes = 1 * 60 + 30; // 1:30am
+  int endMinutes = 3 * 60 + 0;    // 3:00am
+
+  return currentTotalMinutes >= startMinutes && currentTotalMinutes < endMinutes;
 }
 
 // Helper function to load images with error handling
@@ -267,7 +289,12 @@ void draw() {
 
   // Always draw background first to prevent white screen
   stroke(0);
-  fill(backgroundcolor);
+  // Check if we should show grey screen (Ramadan 1:30am to 3:00am)
+  if (enableRamadanGreyScreen && isRamadan && isRamadanGreyScreenTime()) {
+    fill(128); // Grey color for Ramadan night window
+  } else {
+    fill(backgroundcolor);
+  }
   rect(0, 0, viewWidth, viewHeight);
 
   if (millis() - lastReloadTime > reloadInterval){
@@ -306,6 +333,14 @@ void draw() {
   stroke(0);
   fill(0);
   rect(0, 0, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_TIME_BACKGROUND_HEIGHT));
+
+  // Ramadan grey screen indicator
+  if (enableRamadanGreyScreen && isRamadan && isRamadanGreyScreenTime()) {
+    fill(255);
+    textAlign(CENTER);
+    safeTextFont(TodaysDateFont);
+    text("Ramadan - Night Time", viewWidth/2, y(100));
+  }
 
   // Logo
   if (logo != null) {
@@ -433,6 +468,9 @@ void draw() {
   String HijriDate = safeGetString(hiriDateRow, "hijri_date");
   String HijriMonth = safeGetString(hiriDateRow, "hijri_month");
   String HijriYear = safeGetString(hiriDateRow, "hijri_year");
+
+  // Check if current month is Ramadan
+  isRamadan = isRamadanMonth(HijriMonth);
 
   // Create Date to display which is Gregoran and Hijri Date
   FullHijriDate = (HijriDate + " " + HijriMonth + " " + HijriYear);
