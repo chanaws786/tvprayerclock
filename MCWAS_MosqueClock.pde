@@ -28,8 +28,7 @@ PFont CountDownFont;
 PFont LargeCountDownFont;
 PFont SalahNameFont;
 long lastReloadTime = 0;
-int reloadInterval = 60 * 1000; // 1 min in milliseconds
-int reloadInterval1 = 60 * 60 * 1000; // 1 hour in milliseconds
+int reloadInterval = 5 * 60 * 1000; // 5 min in milliseconds
 
 void setup() {
 
@@ -86,7 +85,8 @@ void reloadTable(){
       }      
     }
   } catch (Exception e ) {
-    println("Exception caught : "+e.getMessage());
+    println("Exception while loading file from url="+fileUrl+ " Error="+e.getMessage());
+    e.printStackTrace();
     table = null;
   }
   
@@ -103,8 +103,8 @@ String getCurrentTime() {
 void draw() {
   
   if (millis() - lastReloadTime > reloadInterval){
-    reloadTable();
     lastReloadTime = millis();
+    thread("reloadTable");
   }
 
   // Set Background
