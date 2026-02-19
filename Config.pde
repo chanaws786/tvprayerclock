@@ -12,7 +12,7 @@ int SalahInProgressOffset = 7;
 int SalahCountDownStart = 60;
 
 // Time in mins for Jum'uah in progress to be displayed 
-int JummahLenghthMin = 25;
+int JummahLenghthMin = 20;
 
 // Number of mins for the large countdown to start before Jamaat time 
 int LargeCountDown = 20;

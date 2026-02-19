@@ -1,0 +1,33 @@
+
+save this file as /etc/systemd/system/processing-app.service
+
+[Unit]
+Description=My Processing Application Service
+# Wait for the network and graphical interface to be ready
+After=network.target graphical.target
+
+[Service]
+# Type=simple is fine for applications that run in the foreground
+Type=simple
+# Specify the user to run the service as (do not run as root)
+User=mustaq
+# Set the working directory to where your script is located
+WorkingDirectory=/home/mustaq/mcwas/tvprayerclock/
+# The command to execute your wrapper script
+ExecStart=/home/mustaq/mcwas/tvprayerclock/run_processing_app.sh
+# Environment variables for the graphical session
+Environment="DISPLAY=:0"
+# Automatically restart the service if it fails or crashes
+Restart=on-failure
+RestartSec=5
+
+[Install]
+# Enable the service to start automatically at system boot
+WantedBy=multi-user.target
+
+
+
+
+
+
+
