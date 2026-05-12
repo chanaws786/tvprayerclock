@@ -29,6 +29,8 @@ PFont LargeCountDownFont;
 PFont SalahNameFont;
 long lastReloadTime = 0;
 int reloadInterval = 5 * 60 * 1000; // 5 min in milliseconds
+volatile boolean isReloading = false;
+Table backupTable;
 
 void setup() {
 
@@ -45,7 +47,7 @@ void setup() {
   yRatio = float(viewHeight) / float(MAX_HEIGHT);
   rtpanex = int(x(3122));
   rtpaney = int(y(1500));
-  frameRate(2);
+  frameRate(30);
 
   rightpane = loadImage("images/mosque_clock_right_pane_whatsapp.png");
   rightpane.resize(x(rightpane.width), y(rightpane.height));
@@ -70,29 +72,65 @@ void setup() {
 
 // Load the timetable file
 void reloadTable(){
-  try {
-    if (fileUrl.length()>1) {
-      //println("Loading table from "+fileUrl + " at " +getCurrentTime() );
-      table = loadTable(fileUrl, "header, csv");
-    } else {
-      println("fileUrl is empty. Loading local file.");
-      if (str(year()) == "2025")
-      {
-        table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
-      } else
-      {
-        table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
-      }      
-    }
-  } catch (Exception e ) {
-    println("Exception while loading file from url="+fileUrl+ " Error="+e.getMessage());
-    e.printStackTrace();
-    table = null;
+  if (isReloading) {
+    println("Reload already in progress, skipping...");
+    return;
   }
-  
-  if (table==null) {
-    println("Loading from fileUrl failed.  Loading local file.");
-    table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
+
+  isReloading = true;
+  Table newTable = null;
+
+  try {
+    println("Starting table reload at " + getCurrentTime());
+
+    if (fileUrl.length()>1) {
+      // Try loading from URL with timeout protection
+      try {
+        // Set a timeout for network operations
+        java.net.URL url = new java.net.URL(fileUrl);
+        java.net.URLConnection conn = url.openConnection();
+        conn.setConnectTimeout(10000); // 10 second timeout
+        conn.setReadTimeout(10000);    // 10 second read timeout
+        java.io.InputStream is = conn.getInputStream();
+        newTable = loadTable(is, "header, csv");
+        is.close();
+        println("Successfully loaded table from URL");
+      } catch (Exception e) {
+        println("URL load failed: " + e.getMessage() + ", falling back to local file");
+        newTable = null;
+      }
+    }
+
+    // Fallback to local file if URL load failed or not configured
+    if (newTable == null) {
+      println("Loading local file...");
+      if (str(year()) == "2025") {
+        newTable = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
+      } else {
+        newTable = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
+      }
+      println("Successfully loaded local table");
+    }
+
+    // Only update the main table if load was successful
+    if (newTable != null && newTable.getRowCount() > 0) {
+      backupTable = table; // Keep current table as backup
+      table = newTable;
+      println("Table reloaded successfully at " + getCurrentTime());
+    } else {
+      println("Reload failed: table is null or empty, keeping current table");
+    }
+
+  } catch (Exception e) {
+    println("Exception during reload: " + e.getMessage());
+    e.printStackTrace();
+    // Keep the existing table if reload fails
+    if (table == null && backupTable != null) {
+      println("Restoring from backup table");
+      table = backupTable;
+    }
+  } finally {
+    isReloading = false;
   }
 }
 
@@ -101,10 +139,30 @@ String getCurrentTime() {
 }
 
 void draw() {
-  
+
   if (millis() - lastReloadTime > reloadInterval){
     lastReloadTime = millis();
     thread("reloadTable");
+  }
+
+  // Safety check: if table is null, try to reload it synchronously
+  if (table == null) {
+    println("Table is null, attempting emergency reload...");
+    try {
+      if (str(year()) == "2025") {
+        table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
+      } else {
+        table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
+      }
+    } catch (Exception e) {
+      println("Emergency reload failed: " + e.getMessage());
+      // Display error message and return
+      fill(255);
+      textAlign(CENTER);
+      textFont(createFont("font/AvenirNextLTPro-Regular.otf", x(50)));
+      text("Error: Unable to load prayer timetable. Please check data files.", viewWidth/2, viewHeight/2);
+      return;
+    }
   }
 
   // Set Background
@@ -209,7 +267,17 @@ void draw() {
   String dsi = str(d);
   //String msi = str(mmm);
   TodaysDate = (dsi + " " + mmm);
-    TableRow row = table.findRow(TodaysDate, "normal_date");
+
+  // Safety check for table
+  if (table == null) {
+    fill(255);
+    textAlign(CENTER);
+    textFont(createFont("font/AvenirNextLTPro-Regular.otf", x(50)));
+    text("Error: Prayer timetable not loaded", viewWidth/2, viewHeight/2);
+    return;
+  }
+
+  TableRow row = table.findRow(TodaysDate, "normal_date");
   if (row==null) {
     // Error Message
     fill(255);
@@ -225,7 +293,11 @@ void draw() {
   int rowNum = row.getInt("month_num");
   int nextRowIndex = rowNum % table.getRowCount(); //because rowIndex is always rowNum-1;
 
-  TableRow nextRow = table.getRow(nextRowIndex);  
+  TableRow nextRow = table.getRow(nextRowIndex);
+  if (nextRow == null) {
+    println("Warning: nextRow is null for index " + nextRowIndex);
+    nextRow = row; // Fallback to current row
+  }  
 
   String Date = row.getString("normal_date");
   String Day = row.getString("normal_day");
@@ -237,6 +309,15 @@ void draw() {
   int nextJumuahRowIndex = (jumuahRowIndex+7) % table.getRowCount();
   TableRow jumuahRow = table.getRow(jumuahRowIndex);
   TableRow nextJumuahRow = table.getRow(nextJumuahRowIndex);
+
+  if (jumuahRow == null) {
+    println("Warning: jumuahRow is null for index " + jumuahRowIndex);
+    jumuahRow = row; // Fallback to current row
+  }
+  if (nextJumuahRow == null) {
+    println("Warning: nextJumuahRow is null for index " + nextJumuahRowIndex);
+    nextJumuahRow = nextRow; // Fallback to next row
+  }
 
   Times fajr = getTimesFor("Fajr", "fajr_jamah", "fajr_start", null, row, nextRow, CurrentTotalTimeMins, 0, false);
   Times sunrise = getTimesFor("Sunrise", "sunrise", "sunrise", null, row, nextRow, CurrentTotalTimeMins, 0, false);
@@ -427,9 +508,20 @@ int salahTimeInMinutes(String timeInString, int hoursOffset, boolean isDhuhrORJu
 }
 
 Times getTimesFor(String name, String colJamah, String colStart1, String colStart2, TableRow row, TableRow nextRow, int CurrentTotalTimeMins, int hoursOffset, boolean isDhuhrORJumuah) {
+  // Safety check for null rows
+  if (row == null) {
+    println("Error: row is null in getTimesFor for " + name);
+    return new Times(name, "00:00", "00:00", "", 0, 0);
+  }
+
   String jamah = row.getString(colJamah);
   String start1 = row.getString(colStart1);
   String start2 = colStart2!=null?row.getString(colStart2):"";
+
+  // Safety check for null values
+  if (jamah == null || jamah.isEmpty()) jamah = "00:00";
+  if (start1 == null || start1.isEmpty()) start1 = "00:00";
+
   int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
 
   //Set jummah's split time to show in progress    
@@ -446,16 +538,20 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
 
   //Set next jummah's salah time and show dhur for saturday
   if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == 6 && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins)){
-    start1 = nextRow.getString(colStart1);
-    start2 = colStart2!=null?nextRow.getString(colStart2):"";
-    jamah = nextRow.getString(colJamah);
+    if (nextRow != null) {
+      start1 = nextRow.getString(colStart1);
+      start2 = colStart2!=null?nextRow.getString(colStart2):"";
+      jamah = nextRow.getString(colJamah);
+    }
   }
 
-  //Show tomorrow's salah time   
+  //Show tomorrow's salah time
   if ((CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) && !row.getString("normal_day").equals("Fri")) {
-    jamah = nextRow.getString(colJamah);
-    start1 = nextRow.getString(colStart1);
-    start2 = colStart2!=null?nextRow.getString(colStart2):"";
+    if (nextRow != null) {
+      jamah = nextRow.getString(colJamah);
+      start1 = nextRow.getString(colStart1);
+      start2 = colStart2!=null?nextRow.getString(colStart2):"";
+    }
   }
 
   return new Times(name, jamah, start1, start2, jamahTimeInMinutes, salahTimeInMinutes(start1, hoursOffset, isDhuhrORJumuah));
