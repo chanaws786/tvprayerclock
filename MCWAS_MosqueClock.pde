@@ -40,6 +40,7 @@ void setup() {
   //size(1280, 720);
 
   fullScreen(P2D);
+  pixelDensity(1);
   viewWidth = displayWidth;
   viewHeight = displayHeight;
 
