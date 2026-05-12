@@ -84,16 +84,9 @@ void reloadTable(){
     println("Starting table reload at " + getCurrentTime());
 
     if (fileUrl.length()>1) {
-      // Try loading from URL with timeout protection
+      // Try loading from URL
       try {
-        // Set a timeout for network operations
-        java.net.URL url = new java.net.URL(fileUrl);
-        java.net.URLConnection conn = url.openConnection();
-        conn.setConnectTimeout(10000); // 10 second timeout
-        conn.setReadTimeout(10000);    // 10 second read timeout
-        java.io.InputStream is = conn.getInputStream();
-        newTable = loadTable(is, "header, csv");
-        is.close();
+        newTable = loadTable(fileUrl, "header");
         println("Successfully loaded table from URL");
       } catch (Exception e) {
         println("URL load failed: " + e.getMessage() + ", falling back to local file");
