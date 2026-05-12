@@ -205,7 +205,7 @@ void draw() {
   rect(0, 0, x(2400), y(400));
 
   // Logo
-  image(logo, x(2400), 0);
+  image(logo, x(2400), y(20));
 
   // Right Pane background and default image
   fill(rightpanecolour);
