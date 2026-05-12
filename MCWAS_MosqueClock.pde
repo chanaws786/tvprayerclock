@@ -84,12 +84,45 @@ void reloadTable(){
     println("Starting table reload at " + getCurrentTime());
 
     if (fileUrl.length()>1) {
-      // Try loading from URL
+      // Try loading from URL with proper HTTPS handling
       try {
-        newTable = loadTable(fileUrl, "header");
-        println("Successfully loaded table from URL");
+        java.net.URL url = new java.net.URL(fileUrl);
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(15000); // 15 second timeout
+        conn.setReadTimeout(15000);    // 15 second read timeout
+        conn.setInstanceFollowRedirects(true); // Follow redirects
+        
+        int responseCode = conn.getResponseCode();
+        if (responseCode == 200) {
+          java.io.InputStream is = conn.getInputStream();
+          java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
+          StringBuilder content = new StringBuilder();
+          String line;
+          while ((line = reader.readLine()) != null) {
+            content.append(line).append("\n");
+          }
+          reader.close();
+          is.close();
+          
+          // Save to temporary file
+          java.io.File tempFile = java.io.File.createTempFile("prayer_timetable", ".csv");
+          java.io.FileWriter writer = new java.io.FileWriter(tempFile);
+          writer.write(content.toString());
+          writer.close();
+          
+          // Load from temp file
+          newTable = loadTable(tempFile.getAbsolutePath(), "header");
+          tempFile.delete();
+          println("Successfully loaded table from URL");
+        } else {
+          println("URL load failed with HTTP code: " + responseCode + ", falling back to local file");
+          newTable = null;
+        }
+        conn.disconnect();
       } catch (Exception e) {
         println("URL load failed: " + e.getMessage() + ", falling back to local file");
+        e.printStackTrace();
         newTable = null;
       }
     }
