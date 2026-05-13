@@ -171,7 +171,7 @@ boolean isRamadanMonth(String hijriMonth) {
   return hijriMonth != null && (hijriMonth.equalsIgnoreCase("Ramadan") || hijriMonth.equalsIgnoreCase("Ramadhan"));
 }
 
-// Helper function to check if current time is within Ramadan grey screen window (1:15am to 2:30am)
+// Helper function to check if current time is within Ramadan grey screen window (configurable via config.properties)
 boolean isRamadanGreyScreenTime() {
   int currentHour = hour();
   int currentMinute = minute();
@@ -191,12 +191,34 @@ boolean isRamadanGreyScreenTime() {
 
   int currentTotalMinutes = currentHour * 60 + currentMinute;
 
-  // 1:15am = 1 * 60 + 15 = 75 minutes
-  // 2:30am = 2 * 60 + 30 = 150 minutes
-  int startMinutes = 1 * 60 + 15; // 1:15am
-  int endMinutes = 2 * 60 + 30;    // 2:30am
+  // Parse configurable start and end times from configuration
+  int startMinutes = parseTimeToMinutes(ramadanGreyScreenStart);
+  int endMinutes = parseTimeToMinutes(ramadanGreyScreenEnd);
 
   return currentTotalMinutes >= startMinutes && currentTotalMinutes < endMinutes;
+}
+
+// Helper function to parse time string (HH:MM) to minutes since midnight
+int parseTimeToMinutes(String timeString) {
+  if (timeString == null || timeString.isEmpty()) {
+    logger.warn("Empty time string provided, using default 0");
+    return 0;
+  }
+
+  try {
+    String[] parts = timeString.split(":");
+    if (parts.length == 2) {
+      int hour = parseInt(parts[0].trim());
+      int minute = parseInt(parts[1].trim());
+      return hour * 60 + minute;
+    } else {
+      logger.warn("Invalid time format: " + timeString + ", expected HH:MM");
+      return 0;
+    }
+  } catch (Exception e) {
+    logger.error("Error parsing time string: " + timeString, e);
+    return 0;
+  }
 }
 
 // Helper function to load images with error handling
@@ -367,7 +389,7 @@ void draw() {
     textAlign(CENTER, CENTER);
     safeTextFont(TodaysDateFont);
     text("Ramadan - Night Time", viewWidth/2, viewHeight/2 - 50);
-    text("1:15am - 2:30am", viewWidth/2, viewHeight/2 + 50);
+    text(ramadanGreyScreenStart + "am - " + ramadanGreyScreenEnd + "am", viewWidth/2, viewHeight/2 + 50);
 
     return; // Skip drawing all other UI elements
   }

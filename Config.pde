@@ -26,6 +26,8 @@ int NextDayTriggerInMinutes = 5;
 
 // Ramadan grey screen settings
 boolean enableRamadanGreyScreen = true;
+String ramadanGreyScreenStart = "1:15";
+String ramadanGreyScreenEnd = "2:30";
 boolean testMode = false;
 String testTime = "";
 boolean forceRamadanMode = false;
@@ -131,6 +133,8 @@ void loadConfiguration() {
     
     // Load Ramadan settings
     enableRamadanGreyScreen = Boolean.parseBoolean(props.getProperty("enableRamadanGreyScreen", "true"));
+    ramadanGreyScreenStart = props.getProperty("ramadanGreyScreenStart", "1:15");
+    ramadanGreyScreenEnd = props.getProperty("ramadanGreyScreenEnd", "2:30");
     testMode = Boolean.parseBoolean(props.getProperty("testMode", "false"));
     testTime = props.getProperty("testTime", "");
     forceRamadanMode = Boolean.parseBoolean(props.getProperty("forceRamadanMode", "false"));
