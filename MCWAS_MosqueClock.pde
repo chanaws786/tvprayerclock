@@ -4,15 +4,13 @@
 
 import java.util.Calendar;
 
-int rtpanex = 3122;
-int rtpaney = 1500;
+int rtpanex;
+int rtpaney;
 PImage rightpane;
 PImage leftBottomPane;
 PImage logo;
 int viewWidth;
 int viewHeight;
-int MAX_WIDTH = 3840;
-int MAX_HEIGHT = 2160;
 float xRatio;
 float yRatio;
 Table table;
@@ -27,12 +25,58 @@ PFont CountDownFont;
 PFont LargeCountDownFont;
 PFont SalahNameFont;
 long lastReloadTime = 0;
-int reloadInterval = 5 * 60 * 1000; // 5 min in milliseconds
+int reloadInterval;
 volatile boolean isReloading = false;
 Table backupTable;
 
 // Ramadan grey screen tracking
 boolean isRamadan = false;
+
+// Logging system
+class Logger {
+  private static final String LOG_LEVEL_INFO = "INFO";
+  private static final String LOG_LEVEL_WARN = "WARN";
+  private static final String LOG_LEVEL_ERROR = "ERROR";
+  private static final String LOG_LEVEL_DEBUG = "DEBUG";
+  
+  private String logLevel = "INFO"; // Default log level
+  
+  void setLogLevel(String level) {
+    this.logLevel = level.toUpperCase();
+  }
+  
+  void info(String message) {
+    log(LOG_LEVEL_INFO, message);
+  }
+  
+  void warn(String message) {
+    log(LOG_LEVEL_WARN, message);
+  }
+  
+  void error(String message) {
+    log(LOG_LEVEL_ERROR, message);
+  }
+  
+  void error(String message, Exception e) {
+    log(LOG_LEVEL_ERROR, message + " - " + e.getMessage());
+    if (e != null) {
+      e.printStackTrace();
+    }
+  }
+  
+  void debug(String message) {
+    if (logLevel.equals(LOG_LEVEL_DEBUG)) {
+      log(LOG_LEVEL_DEBUG, message);
+    }
+  }
+  
+  private void log(String level, String message) {
+    String timestamp = getCurrentTime();
+    println("[" + timestamp + "] [" + level + "] " + message);
+  }
+}
+
+Logger logger = new Logger();
 
 // Month names array for efficient lookup
 String[] MONTH_NAMES = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -49,27 +93,13 @@ final int DAY_SATURDAY = 7;
 // Day name constants for string comparisons
 final String DAY_FRIDAY_NAME = "Fri";
 
-// Layout coordinate constants (base values before scaling)
-final int LAYOUT_RIGHT_PANE_X = 2400;
-final int LAYOUT_RIGHT_PANE_Y = 400;
-final int LAYOUT_RIGHT_PANE_WIDTH = 1440;
-final int LAYOUT_RIGHT_PANE_HEIGHT = 1760;
-final int LAYOUT_TIME_BACKGROUND_HEIGHT = 400;
-final int LAYOUT_LEFT_MARGIN = 10;
-final int LAYOUT_SALAH_NAME_X = 50;
-final int LAYOUT_SALAH_NAME_Y = 848;
-final int LAYOUT_SALAH_GAP = 280;
-final int LAYOUT_BEGINS_ROW_X = 800;
-final int LAYOUT_JAMAAT_ROW_X = 2300;
-final int LAYOUT_HEADINGS_Y = 600;
-final int LAYOUT_TIME_Y = 320;
-final int LAYOUT_DATE_Y = 200;
-final int LAYOUT_LOGO_Y = 20;
-final int LAYOUT_ERROR_BOX_Y = 280;
-final int LAYOUT_BOTTOM_PANE_Y = 1996;
-final int LAYOUT_BOTTOM_PANE_HEIGHT = 164;
-
 void setup() {
+
+  // Load configuration from properties file
+  loadConfiguration();
+
+  // Set log level from configuration
+  logger.setLogLevel(logLevel);
 
   fullScreen(P2D);
   pixelDensity(1);
@@ -78,9 +108,9 @@ void setup() {
 
   xRatio = float(viewWidth) / float(MAX_WIDTH);
   yRatio = float(viewHeight) / float(MAX_HEIGHT);
-  rtpanex = int(x(3122));
-  rtpaney = int(y(1500));
-  frameRate(30);
+  rtpanex = int(x(rightPaneTextX));
+  rtpaney = int(y(rightPaneTextY));
+  frameRate(frameRateValue);
 
   // Load images with error handling using helper function
   rightpane = loadImageSafely("images/mosque_clock_right_pane_whatsapp.png", "rightpane");
@@ -89,15 +119,18 @@ void setup() {
 
 
   // Load fonts with error handling using helper function
-  TimeFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(300), "TimeFont");
-  SalahTimeFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(160), "SalahTimeFont");
-  SalahTimeFontBold = loadFontSafely("font/AvenirNextLTPro-Bold.otf", x(160), "SalahTimeFontBold");
-  SalahTimeFontHeading = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(104), "SalahTimeFontHeading");
-  TodaysDateFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(90), "TodaysDateFont");
-  CountDownFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(700), "CountDownFont");
-  LargeCountDownFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(900), "LargeCountDownFont");
-  SalahNameFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(600), "SalahNameFont");
-  
+  TimeFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(timeFontSize), "TimeFont");
+  SalahTimeFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(salahTimeFontSize), "SalahTimeFont");
+  SalahTimeFontBold = loadFontSafely("font/AvenirNextLTPro-Bold.otf", x(salahTimeFontSize), "SalahTimeFontBold");
+  SalahTimeFontHeading = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(salahTimeHeadingFontSize), "SalahTimeFontHeading");
+  TodaysDateFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(todaysDateFontSize), "TodaysDateFont");
+  CountDownFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(countDownFontSize), "CountDownFont");
+  LargeCountDownFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(largeCountDownFontSize), "LargeCountDownFont");
+  SalahNameFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(salahNameFontSize), "SalahNameFont");
+
+  // Set reload interval from configuration
+  reloadInterval = reloadIntervalMinutes * 60 * 1000;
+
   reloadTable(); // Load the table initially
 
 }
@@ -107,11 +140,13 @@ PFont loadFontSafely(String fontPath, float fontSize, String fontName) {
   try {
     PFont font = createFont(fontPath, fontSize);
     if (font == null) {
-      println("Warning: Failed to load " + fontName);
+      logger.warn("Failed to load " + fontName);
+    } else {
+      logger.debug("Successfully loaded " + fontName);
     }
     return font;
   } catch (Exception e) {
-    println("Error loading " + fontName + ": " + e.getMessage());
+    logger.error("Error loading " + fontName, e);
     return null;
   }
 }
@@ -136,16 +171,30 @@ boolean isRamadanMonth(String hijriMonth) {
   return hijriMonth != null && (hijriMonth.equalsIgnoreCase("Ramadan") || hijriMonth.equalsIgnoreCase("Ramadhan"));
 }
 
-// Helper function to check if current time is within Ramadan grey screen window (1:30am to 3:00am)
+// Helper function to check if current time is within Ramadan grey screen window (1:15am to 2:30am)
 boolean isRamadanGreyScreenTime() {
   int currentHour = hour();
   int currentMinute = minute();
+
+  // Use test time if test mode is enabled
+  if (testMode && testTime != null && !testTime.isEmpty()) {
+    String[] parts = testTime.split(":");
+    if (parts.length == 2) {
+      try {
+        currentHour = parseInt(parts[0].trim());
+        currentMinute = parseInt(parts[1].trim());
+      } catch (Exception e) {
+        logger.error("Invalid test time format: " + testTime + ", using current time");
+      }
+    }
+  }
+
   int currentTotalMinutes = currentHour * 60 + currentMinute;
 
-  // 1:30am = 1 * 60 + 30 = 90 minutes
-  // 3:00am = 3 * 60 + 0 = 180 minutes
-  int startMinutes = 1 * 60 + 30; // 1:30am
-  int endMinutes = 3 * 60 + 0;    // 3:00am
+  // 1:15am = 1 * 60 + 15 = 75 minutes
+  // 2:30am = 2 * 60 + 30 = 150 minutes
+  int startMinutes = 1 * 60 + 15; // 1:15am
+  int endMinutes = 2 * 60 + 30;    // 2:30am
 
   return currentTotalMinutes >= startMinutes && currentTotalMinutes < endMinutes;
 }
@@ -156,12 +205,13 @@ PImage loadImageSafely(String imagePath, String imageName) {
     PImage img = loadImage(imagePath);
     if (img != null) {
       img.resize(x(img.width), y(img.height));
+      logger.debug("Successfully loaded " + imageName);
     } else {
-      println("Warning: Failed to load " + imageName);
+      logger.warn("Failed to load " + imageName);
     }
     return img;
   } catch (Exception e) {
-    println("Error loading " + imageName + ": " + e.getMessage());
+    logger.error("Error loading " + imageName, e);
     return null;
   }
 }
@@ -169,7 +219,7 @@ PImage loadImageSafely(String imagePath, String imageName) {
 // Load the timetable file
 void reloadTable(){
   if (isReloading) {
-    println("Reload already in progress, skipping...");
+    logger.warn("Reload already in progress, skipping...");
     return;
   }
 
@@ -177,7 +227,7 @@ void reloadTable(){
   Table newTable = null;
 
   try {
-    println("Starting table reload at " + getCurrentTime());
+    logger.info("Starting table reload at " + getCurrentTime());
 
     if (fileUrl.length()>1) {
       // Try loading from URL with proper HTTPS handling
@@ -185,10 +235,10 @@ void reloadTable(){
         java.net.URL url = new java.net.URL(fileUrl);
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
-        conn.setConnectTimeout(30000); // 30 second timeout
-        conn.setReadTimeout(30000);    // 30 second read timeout
+        conn.setConnectTimeout(urlConnectionTimeout);
+        conn.setReadTimeout(urlReadTimeout);
         conn.setInstanceFollowRedirects(true); // Follow redirects
-        
+
         int responseCode = conn.getResponseCode();
         if (responseCode == 200) {
           java.io.InputStream is = null;
@@ -212,49 +262,47 @@ void reloadTable(){
 
             // Load from temp file
             newTable = loadTable(tempFile.getAbsolutePath(), "header");
-            println("Successfully loaded table from URL");
+            logger.info("Successfully loaded table from URL");
           } finally {
             // Close resources in finally block to prevent leaks
             if (reader != null) {
-              try { reader.close(); } catch (Exception e) { println("Error closing reader: " + e.getMessage()); }
+              try { reader.close(); } catch (Exception e) { logger.error("Error closing reader", e); }
             }
             if (is != null) {
-              try { is.close(); } catch (Exception e) { println("Error closing input stream: " + e.getMessage()); }
+              try { is.close(); } catch (Exception e) { logger.error("Error closing input stream", e); }
             }
             if (writer != null) {
-              try { writer.close(); } catch (Exception e) { println("Error closing writer: " + e.getMessage()); }
+              try { writer.close(); } catch (Exception e) { logger.error("Error closing writer", e); }
             }
             if (tempFile != null && tempFile.exists()) {
               tempFile.delete();
             }
           }
         } else {
-          println("URL load failed with HTTP code: " + responseCode + ", falling back to local file");
+          logger.warn("URL load failed with HTTP code: " + responseCode + ", falling back to local file");
           newTable = null;
         }
         conn.disconnect();
       } catch (Exception e) {
-        println("URL load failed: " + e.getMessage() + ", falling back to local file");
-        e.printStackTrace();
+        logger.error("URL load failed, falling back to local file", e);
         newTable = null;
       }
     }
 
     // Fallback to local file if URL load failed or not configured
     if (newTable == null) {
-      println("Loading local file...");
+      logger.info("Loading local file...");
       String filename = getDataFilename();
       try {
         newTable = loadTable(filename, "header");
         if (newTable != null && newTable.getRowCount() > 0) {
-          println("Successfully loaded local table: " + filename);
+          logger.info("Successfully loaded local table: " + filename);
         } else {
-          println("Warning: Local table loaded but is null or empty");
+          logger.warn("Local table loaded but is null or empty");
           newTable = null;
         }
       } catch (Exception e) {
-        println("Error loading local file: " + e.getMessage());
-        e.printStackTrace();
+        logger.error("Error loading local file: " + filename, e);
         newTable = null;
       }
     }
@@ -263,17 +311,16 @@ void reloadTable(){
     if (newTable != null && newTable.getRowCount() > 0) {
       backupTable = table; // Keep current table as backup
       table = newTable;
-      println("Table reloaded successfully at " + getCurrentTime());
+      logger.info("Table reloaded successfully at " + getCurrentTime());
     } else {
-      println("Reload failed: table is null or empty, keeping current table");
+      logger.error("Reload failed: table is null or empty, keeping current table");
     }
 
   } catch (Exception e) {
-    println("Exception during reload: " + e.getMessage());
-    e.printStackTrace();
+    logger.error("Exception during reload", e);
     // Keep the existing table if reload fails
     if (table == null && backupTable != null) {
-      println("Restoring from backup table");
+      logger.info("Restoring from backup table");
       table = backupTable;
     }
   } finally {
@@ -287,15 +334,43 @@ String getCurrentTime() {
 
 void draw() {
 
+  // Check if we should show grey screen (Ramadan 1:15am to 2:30am)
+  boolean showGreyScreen = enableRamadanGreyScreen && isRamadan && isRamadanGreyScreenTime();
+
+  // Debug logging (only log occasionally to avoid spam)
+  if (frameCount % 60 == 0) { // Log once per second (assuming 60fps)
+    logger.debug("Grey screen check: enableRamadanGreyScreen=" + enableRamadanGreyScreen +
+                 ", isRamadan=" + isRamadan +
+                 ", isRamadanGreyScreenTime=" + isRamadanGreyScreenTime() +
+                 ", showGreyScreen=" + showGreyScreen +
+                 ", currentHour=" + hour() + ", currentMinute=" + minute());
+  }
+
   // Always draw background first to prevent white screen
   stroke(0);
-  // Check if we should show grey screen (Ramadan 1:30am to 3:00am)
-  if (enableRamadanGreyScreen && isRamadan && isRamadanGreyScreenTime()) {
+  if (showGreyScreen) {
     fill(128); // Grey color for Ramadan night window
   } else {
     fill(backgroundcolor);
   }
   rect(0, 0, viewWidth, viewHeight);
+
+  // RAMADAN GREY SCREEN - Show this BEFORE any data loading errors
+  // This ensures grey screen works even if data loading fails
+  if (showGreyScreen) {
+    // Grey background
+    fill(128);
+    rect(0, 0, viewWidth, viewHeight);
+
+    // Ramadan night time message
+    fill(255);
+    textAlign(CENTER, CENTER);
+    safeTextFont(TodaysDateFont);
+    text("Ramadan - Night Time", viewWidth/2, viewHeight/2 - 50);
+    text("1:15am - 2:30am", viewWidth/2, viewHeight/2 + 50);
+
+    return; // Skip drawing all other UI elements
+  }
 
   if (millis() - lastReloadTime > reloadInterval){
     lastReloadTime = millis();
@@ -304,19 +379,18 @@ void draw() {
 
   // Safety check: if table is null, try to reload it synchronously
   if (table == null) {
-    println("Table is null, attempting emergency reload...");
+    logger.error("Table is null, attempting emergency reload...");
     try {
       String filename = getDataFilename();
       table = loadTable(filename, "header");
       if (table != null && table.getRowCount() > 0) {
-        println("Emergency reload completed: " + filename);
+        logger.info("Emergency reload completed: " + filename);
       } else {
-        println("Emergency reload failed: table is null or empty");
+        logger.error("Emergency reload failed: table is null or empty");
         throw new Exception("Loaded table is null or empty");
       }
     } catch (Exception e) {
-      println("Emergency reload failed: " + e.getMessage());
-      e.printStackTrace();
+      logger.error("Emergency reload failed", e);
       // Display error message with contrasting background
       fill(0);
       stroke(255);
@@ -334,21 +408,13 @@ void draw() {
   fill(0);
   rect(0, 0, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_TIME_BACKGROUND_HEIGHT));
 
-  // Ramadan grey screen indicator
-  if (enableRamadanGreyScreen && isRamadan && isRamadanGreyScreenTime()) {
-    fill(255);
-    textAlign(CENTER);
-    safeTextFont(TodaysDateFont);
-    text("Ramadan - Night Time", viewWidth/2, y(100));
-  }
-
   // Logo
   if (logo != null) {
     // Center logo horizontally within the right pane, position at top
     int logoX = x(LAYOUT_RIGHT_PANE_X + LAYOUT_RIGHT_PANE_WIDTH/2) - logo.width/2;
     image(logo, logoX, 0); // Position at top edge
   } else {
-    println("Warning: Logo image is null, skipping display");
+    logger.warn("Logo image is null, skipping display");
   }
 
   // Right Pane background and default image
@@ -358,7 +424,7 @@ void draw() {
   if (rightpane != null) {
     image(rightpane, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_RIGHT_PANE_Y));
   } else {
-    println("Warning: Right pane image is null, skipping display");
+    logger.warn("Right pane image is null, skipping display");
   }
 
   // Get the day of the week to determine if its Jumuah
@@ -429,7 +495,7 @@ void draw() {
 
   TableRow nextRow = table.getRow(nextRowIndex);
   if (nextRow == null) {
-    println("Warning: nextRow is null for index " + nextRowIndex);
+    logger.warn("nextRow is null for index " + nextRowIndex);
     nextRow = row; // Fallback to current row
   }  
 
@@ -445,11 +511,11 @@ void draw() {
   TableRow nextJumuahRow = table.getRow(nextJumuahRowIndex);
 
   if (jumuahRow == null) {
-    println("Warning: jumuahRow is null for index " + jumuahRowIndex);
+    logger.warn("jumuahRow is null for index " + jumuahRowIndex);
     jumuahRow = row; // Fallback to current row
   }
   if (nextJumuahRow == null) {
-    println("Warning: nextJumuahRow is null for index " + nextJumuahRowIndex);
+    logger.warn("nextJumuahRow is null for index " + nextJumuahRowIndex);
     nextJumuahRow = nextRow; // Fallback to next row
   }
 
@@ -469,8 +535,8 @@ void draw() {
   String HijriMonth = safeGetString(hiriDateRow, "hijri_month");
   String HijriYear = safeGetString(hiriDateRow, "hijri_year");
 
-  // Check if current month is Ramadan
-  isRamadan = isRamadanMonth(HijriMonth);
+  // Check if current month is Ramadan (or force mode for testing)
+  isRamadan = forceRamadanMode || isRamadanMonth(HijriMonth);
 
   // Create Date to display which is Gregoran and Hijri Date
   FullHijriDate = (HijriDate + " " + HijriMonth + " " + HijriYear);
@@ -634,7 +700,7 @@ int salahTimeInMinutes(String timeInString, int hoursOffset, boolean isDhuhrORJu
 Times getTimesFor(String name, String colJamah, String colStart1, String colStart2, TableRow row, TableRow nextRow, int CurrentTotalTimeMins, int hoursOffset, boolean isDhuhrORJumuah, int dayOfWeek) {
   // Safety check for null rows
   if (row == null) {
-    println("Error: row is null in getTimesFor for " + name);
+    logger.error("row is null in getTimesFor for " + name);
     return new Times(name, "00:00", "00:00", "", 0, 0);
   }
 
