@@ -388,8 +388,8 @@ void draw() {
     fill(255);
     textAlign(CENTER, CENTER);
     safeTextFont(TodaysDateFont);
-    text("Ramadan - Night Time", viewWidth/2, viewHeight/2 - 50);
-    text(ramadanGreyScreenStart + "am - " + ramadanGreyScreenEnd + "am", viewWidth/2, viewHeight/2 + 50);
+    text("Ramadan - Night Prayer Time", viewWidth/2, viewHeight/2 - 50);
+    text(ramadanGreyScreenStart + " - " + ramadanGreyScreenEnd, viewWidth/2, viewHeight/2 + 50);
 
     return; // Skip drawing all other UI elements
   }
