@@ -309,7 +309,9 @@ void draw() {
 
   // Logo
   if (logo != null) {
-    image(logo, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_LOGO_Y));
+    // Center logo horizontally within the right pane
+    int logoX = x(LAYOUT_RIGHT_PANE_X + LAYOUT_RIGHT_PANE_WIDTH/2) - logo.width/2;
+    image(logo, logoX, y(LAYOUT_LOGO_Y));
   } else {
     println("Warning: Logo image is null, skipping display");
   }
