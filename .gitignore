@@ -1,5 +1,5 @@
 windows-amd64
-/MCWAS_MosqueClock*.autosave
+*.autosave
 /sketch.properties
 /windows-amd64.zi_
 config.properties.local
