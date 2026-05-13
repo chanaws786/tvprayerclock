@@ -4,7 +4,6 @@
 
 import java.util.Calendar;
 
-int y;
 int rtpanex = 3122;
 int rtpaney = 1500;
 PImage rightpane;
@@ -32,12 +31,42 @@ int reloadInterval = 5 * 60 * 1000; // 5 min in milliseconds
 volatile boolean isReloading = false;
 Table backupTable;
 
-void setup() {
+// Month names array for efficient lookup
+String[] MONTH_NAMES = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-  //size(3840, 2160);
-  //viewWidth = 1280;
-  //viewHeight = 720;
-  //size(1280, 720);
+// Calendar day constants (Java Calendar values)
+final int DAY_SUNDAY = 1;
+final int DAY_MONDAY = 2;
+final int DAY_TUESDAY = 3;
+final int DAY_WEDNESDAY = 4;
+final int DAY_THURSDAY = 5;
+final int DAY_FRIDAY = 6;
+final int DAY_SATURDAY = 7;
+
+// Day name constants for string comparisons
+final String DAY_FRIDAY_NAME = "Fri";
+
+// Layout coordinate constants (base values before scaling)
+final int LAYOUT_RIGHT_PANE_X = 2400;
+final int LAYOUT_RIGHT_PANE_Y = 400;
+final int LAYOUT_RIGHT_PANE_WIDTH = 1440;
+final int LAYOUT_RIGHT_PANE_HEIGHT = 1760;
+final int LAYOUT_TIME_BACKGROUND_HEIGHT = 400;
+final int LAYOUT_LEFT_MARGIN = 10;
+final int LAYOUT_SALAH_NAME_X = 50;
+final int LAYOUT_SALAH_NAME_Y = 848;
+final int LAYOUT_SALAH_GAP = 280;
+final int LAYOUT_BEGINS_ROW_X = 800;
+final int LAYOUT_JAMAAT_ROW_X = 2300;
+final int LAYOUT_HEADINGS_Y = 600;
+final int LAYOUT_TIME_Y = 320;
+final int LAYOUT_DATE_Y = 200;
+final int LAYOUT_LOGO_Y = 20;
+final int LAYOUT_ERROR_BOX_Y = 280;
+final int LAYOUT_BOTTOM_PANE_Y = 1996;
+final int LAYOUT_BOTTOM_PANE_HEIGHT = 164;
+
+void setup() {
 
   fullScreen(P2D);
   pixelDensity(1);
@@ -50,25 +79,69 @@ void setup() {
   rtpaney = int(y(1500));
   frameRate(30);
 
-  rightpane = loadImage("images/mosque_clock_right_pane_whatsapp.png");
-  rightpane.resize(x(rightpane.width), y(rightpane.height));
-  logo = loadImage("images/mosque_logo.png");
-  logo.resize(x(logo.width), y(logo.height));
-  leftBottomPane = loadImage("images/mosque_clock_left_bottom_pane_switch_off_old.png");
-  leftBottomPane.resize(x(leftBottomPane.width), y(leftBottomPane.height));
+  // Load images with error handling using helper function
+  rightpane = loadImageSafely("images/mosque_clock_right_pane_whatsapp.png", "rightpane");
+  logo = loadImageSafely("images/mosque_logo.png", "logo");
+  leftBottomPane = loadImageSafely("images/mosque_clock_left_bottom_pane_switch_off_old.png", "leftBottomPane");
 
 
-  TimeFont = createFont("font/AvenirNextLTPro-Regular.otf", x(300));
-  SalahTimeFont = createFont("font/AvenirNextLTPro-Regular.otf", x(160));
-  SalahTimeFontBold = createFont("font/AvenirNextLTPro-Bold.otf", x(160));
-  SalahTimeFontHeading = createFont("font/AvenirNextLTPro-Regular.otf", x(104));
-  TodaysDateFont = createFont("font/AvenirNextLTPro-Regular.otf", x(90));
-  CountDownFont = createFont("font/AvenirNextLTPro-Regular.otf", x(700));
-  LargeCountDownFont = createFont("font/AvenirNextLTPro-Regular.otf", x(900));
-  SalahNameFont = createFont("font/AvenirNextLTPro-Regular.otf", x(600));
+  // Load fonts with error handling using helper function
+  TimeFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(300), "TimeFont");
+  SalahTimeFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(160), "SalahTimeFont");
+  SalahTimeFontBold = loadFontSafely("font/AvenirNextLTPro-Bold.otf", x(160), "SalahTimeFontBold");
+  SalahTimeFontHeading = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(104), "SalahTimeFontHeading");
+  TodaysDateFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(90), "TodaysDateFont");
+  CountDownFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(700), "CountDownFont");
+  LargeCountDownFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(900), "LargeCountDownFont");
+  SalahNameFont = loadFontSafely("font/AvenirNextLTPro-Regular.otf", x(600), "SalahNameFont");
   
   reloadTable(); // Load the table initially
 
+}
+
+// Helper function to load fonts with error handling
+PFont loadFontSafely(String fontPath, float fontSize, String fontName) {
+  try {
+    PFont font = createFont(fontPath, fontSize);
+    if (font == null) {
+      println("Warning: Failed to load " + fontName);
+    }
+    return font;
+  } catch (Exception e) {
+    println("Error loading " + fontName + ": " + e.getMessage());
+    return null;
+  }
+}
+
+// Helper function to pad time values with leading zeros
+String padTime(int value) {
+  String result = str(value);
+  if (result.length() == 1) {
+    result = "0" + result;
+  }
+  return result;
+}
+
+// Helper function to get the data filename for current year
+String getDataFilename() {
+  int currentYear = year();
+  return "data/mcwas_prayer_timetable_" + currentYear + ".csv";
+}
+
+// Helper function to load images with error handling
+PImage loadImageSafely(String imagePath, String imageName) {
+  try {
+    PImage img = loadImage(imagePath);
+    if (img != null) {
+      img.resize(x(img.width), y(img.height));
+    } else {
+      println("Warning: Failed to load " + imageName);
+    }
+    return img;
+  } catch (Exception e) {
+    println("Error loading " + imageName + ": " + e.getMessage());
+    return null;
+  }
 }
 
 // Load the timetable file
@@ -96,26 +169,43 @@ void reloadTable(){
         
         int responseCode = conn.getResponseCode();
         if (responseCode == 200) {
-          java.io.InputStream is = conn.getInputStream();
-          java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
-          StringBuilder content = new StringBuilder();
-          String line;
-          while ((line = reader.readLine()) != null) {
-            content.append(line).append("\n");
+          java.io.InputStream is = null;
+          java.io.BufferedReader reader = null;
+          java.io.FileWriter writer = null;
+          java.io.File tempFile = null;
+
+          try {
+            is = conn.getInputStream();
+            reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+              content.append(line).append("\n");
+            }
+
+            // Save to temporary file
+            tempFile = java.io.File.createTempFile("prayer_timetable", ".csv");
+            writer = new java.io.FileWriter(tempFile);
+            writer.write(content.toString());
+
+            // Load from temp file
+            newTable = loadTable(tempFile.getAbsolutePath(), "header");
+            println("Successfully loaded table from URL");
+          } finally {
+            // Close resources in finally block to prevent leaks
+            if (reader != null) {
+              try { reader.close(); } catch (Exception e) { println("Error closing reader: " + e.getMessage()); }
+            }
+            if (is != null) {
+              try { is.close(); } catch (Exception e) { println("Error closing input stream: " + e.getMessage()); }
+            }
+            if (writer != null) {
+              try { writer.close(); } catch (Exception e) { println("Error closing writer: " + e.getMessage()); }
+            }
+            if (tempFile != null && tempFile.exists()) {
+              tempFile.delete();
+            }
           }
-          reader.close();
-          is.close();
-          
-          // Save to temporary file
-          java.io.File tempFile = java.io.File.createTempFile("prayer_timetable", ".csv");
-          java.io.FileWriter writer = new java.io.FileWriter(tempFile);
-          writer.write(content.toString());
-          writer.close();
-          
-          // Load from temp file
-          newTable = loadTable(tempFile.getAbsolutePath(), "header");
-          tempFile.delete();
-          println("Successfully loaded table from URL");
         } else {
           println("URL load failed with HTTP code: " + responseCode + ", falling back to local file");
           newTable = null;
@@ -131,12 +221,9 @@ void reloadTable(){
     // Fallback to local file if URL load failed or not configured
     if (newTable == null) {
       println("Loading local file...");
-      if (str(year()) == "2025") {
-        newTable = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
-      } else {
-        newTable = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
-      }
-      println("Successfully loaded local table");
+      String filename = getDataFilename();
+      newTable = loadTable(filename, "header");
+      println("Successfully loaded local table: " + filename);
     }
 
     // Only update the main table if load was successful
@@ -167,6 +254,11 @@ String getCurrentTime() {
 
 void draw() {
 
+  // Always draw background first to prevent white screen
+  stroke(0);
+  fill(backgroundcolor);
+  rect(0, 0, viewWidth, viewHeight);
+
   if (millis() - lastReloadTime > reloadInterval){
     lastReloadTime = millis();
     thread("reloadTable");
@@ -176,43 +268,44 @@ void draw() {
   if (table == null) {
     println("Table is null, attempting emergency reload...");
     try {
-      if (str(year()) == "2025") {
-        table = loadTable("data/mcwas_prayer_timetable_2025.csv", "header");
-      } else {
-        table = loadTable("data/mcwas_prayer_timetable_2026.csv", "header");
-      }
+      String filename = getDataFilename();
+      table = loadTable(filename, "header");
+      println("Emergency reload completed: " + filename);
     } catch (Exception e) {
       println("Emergency reload failed: " + e.getMessage());
-      // Display error message and return
+      // Display error message with contrasting background
+      fill(0);
+      stroke(255);
+      rect(viewWidth/2 - x(400), viewHeight/2 - y(50), x(800), y(100));
       fill(255);
       textAlign(CENTER);
-      textFont(createFont("font/AvenirNextLTPro-Regular.otf", x(50)));
+      safeTextFont(TodaysDateFont);
       text("Error: Unable to load prayer timetable. Please check data files.", viewWidth/2, viewHeight/2);
       return;
     }
   }
 
-  // Set Background
-  // Construct the canvas
-  // Canvas Background
-  stroke(0);
-  fill(backgroundcolor);
-  rect(0, 0, viewWidth, viewHeight);
-
   // Time Background
   stroke(0);
   fill(0);
-  rect(0, 0, x(2400), y(400));
+  rect(0, 0, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_TIME_BACKGROUND_HEIGHT));
 
   // Logo
-  image(logo, x(2400), y(20));
+  if (logo != null) {
+    image(logo, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_LOGO_Y));
+  } else {
+    println("Warning: Logo image is null, skipping display");
+  }
 
   // Right Pane background and default image
   fill(rightpanecolour);
   stroke(0);
-  rect(x(2400), y(400), x(1440), y(1760));
-  image(rightpane, x(2400), y(400));
-  //image(leftBottomPane, x(400), y(2000));
+  rect(x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_RIGHT_PANE_Y), x(LAYOUT_RIGHT_PANE_WIDTH), y(LAYOUT_RIGHT_PANE_HEIGHT));
+  if (rightpane != null) {
+    image(rightpane, x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_RIGHT_PANE_Y));
+  } else {
+    println("Warning: Right pane image is null, skipping display");
+  }
 
   // Get the day of the week to determine if its Jumuah
   Calendar c = Calendar.getInstance();
@@ -232,19 +325,9 @@ void draw() {
   String FullTodaysDate = "";
   String FullHijriDate ="";
 
-  //Build the clock
-  String s0 = str((s));
-  if (s0.length() == 1) {
-    s0 = "0" + s0;
-  };
-  String m0 = str((mi));
-  if (m0.length() == 1) {
-    m0 = "0" + m0;
-  };
-  String h0 = str((h));
-  if (h0.length() == 1) {
-    h0 = "0" + h0;
-  };
+  //Build the clock using helper function for padding
+  String s0 = padTime(s);
+  String m0 = padTime(mi);
 
   // Time String stored in Time variable
   if (hdisplay>12) {
@@ -252,65 +335,35 @@ void draw() {
   };
   String Time = (hdisplay) + ":" + (m0) + ":" + s0;
 
-  //Convert Month to 3 character Month
-  if (m==1) {
-    mmm = "Jan";
-  }
-  if (m==2) {
-    mmm = "Feb";
-  }
-  if (m==3) {
-    mmm = "Mar";
-  }
-  if (m==4) {
-    mmm = "Apr";
-  }
-  if (m==5) {
-    mmm = "May";
-  }
-  if (m==6) {
-    mmm = "Jun";
-  }
-  if (m==7) {
-    mmm = "Jul";
-  }
-  if (m==8) {
-    mmm = "Aug";
-  }
-  if (m==9) {
-    mmm = "Sep";
-  }
-  if (m==10) {
-    mmm = "Oct";
-  }
-  if (m==11) {
-    mmm = "Nov";
-  }
-  if (m==12) {
-    mmm = "Dec";
-  }
+  //Convert Month to 3 character Month using array lookup
+  mmm = MONTH_NAMES[m - 1]; // Array is 0-indexed, months are 1-12
 
   // Construct Todays Date for compare
   String dsi = str(d);
-  //String msi = str(mmm);
   TodaysDate = (dsi + " " + mmm);
 
   // Safety check for table
   if (table == null) {
+    fill(0);
+    stroke(255);
+    rect(viewWidth/2 - x(300), viewHeight/2 - y(50), x(600), y(100));
     fill(255);
     textAlign(CENTER);
-    textFont(createFont("font/AvenirNextLTPro-Regular.otf", x(50)));
+    safeTextFont(TodaysDateFont);
     text("Error: Prayer timetable not loaded", viewWidth/2, viewHeight/2);
     return;
   }
 
   TableRow row = table.findRow(TodaysDate, "normal_date");
   if (row==null) {
-    // Error Message
+    // Error Message with contrasting background
+    fill(0);
+    stroke(255);
+    rect(x(LAYOUT_LEFT_MARGIN), y(LAYOUT_ERROR_BOX_Y), x(LAYOUT_BEGINS_ROW_X), y(80));
     fill(255);
     textAlign(LEFT);
-    textFont(createFont("font/AvenirNextLTPro-Regular.otf", x(50)));
-    text("No row found for date '"+TodaysDate +"' in the spreadsheet", x(10), y(320));
+    safeTextFont(TodaysDateFont);
+    text("No row found for date '"+TodaysDate +"' in the spreadsheet", x(LAYOUT_LEFT_MARGIN), y(LAYOUT_TIME_Y));
     return;
   }
 
@@ -326,8 +379,8 @@ void draw() {
     nextRow = row; // Fallback to current row
   }  
 
-  String Date = row.getString("normal_date");
-  String Day = row.getString("normal_day");
+  String Date = safeGetString(row, "normal_date");
+  String Day = safeGetString(row, "normal_day");
     
     //   Calculate Jumuah time from the spreadsheet.
   int ZeroBasedDayOfWeek = dayOfWeek-1;
@@ -346,82 +399,69 @@ void draw() {
     nextJumuahRow = nextRow; // Fallback to next row
   }
 
-  Times fajr = getTimesFor("Fajr", "fajr_jamah", "fajr_start", null, row, nextRow, CurrentTotalTimeMins, 0, false);
-  Times sunrise = getTimesFor("Sunrise", "sunrise", "sunrise", null, row, nextRow, CurrentTotalTimeMins, 0, false);
-  Times dhuhr = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, row, nextRow, CurrentTotalTimeMins, 0, true);
-  Times asr = getTimesFor("Asr", "asr_jamah", "asr_mitl_1", "asr_mitl_2", row, nextRow, CurrentTotalTimeMins, 12, false);
-  Times maghrib = getTimesFor("Maghrib", "maghrib_jamah","maghrib_start", null, row, nextRow, CurrentTotalTimeMins, 12, false);
-  Times isha = getTimesFor("Isha", "isha_jamah", "isha_start", null, row, nextRow, CurrentTotalTimeMins, 12, false);
-  Times jummah = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, false);
+  Times fajr = getTimesFor("Fajr", "fajr_jamah", "fajr_start", null, row, nextRow, CurrentTotalTimeMins, 0, false, dayOfWeek);
+  Times sunrise = getTimesFor("Sunrise", "sunrise", "sunrise", null, row, nextRow, CurrentTotalTimeMins, 0, false, dayOfWeek);
+  Times dhuhr = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, row, nextRow, CurrentTotalTimeMins, 0, true, dayOfWeek);
+  Times asr = getTimesFor("Asr", "asr_jamah", "asr_mitl_1", "asr_mitl_2", row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek);
+  Times maghrib = getTimesFor("Maghrib", "maghrib_jamah","maghrib_start", null, row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek);
+  Times isha = getTimesFor("Isha", "isha_jamah", "isha_start", null, row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek);
+  Times jummah = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, false, dayOfWeek);
 
-  int KarahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
+  int karahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
     
   // Hijri Date
   TableRow hiriDateRow = CurrentTotalTimeMins < maghrib.startTimeInMinutes ? row : nextRow;
-  String HijriDate = hiriDateRow.getString("hijri_date");
-  String HijriMonth = hiriDateRow.getString("hijri_month");
-  String HijriYear = hiriDateRow.getString("hijri_year");
-  //String FullTodaysDateWithHijri = "";
+  String HijriDate = safeGetString(hiriDateRow, "hijri_date");
+  String HijriMonth = safeGetString(hiriDateRow, "hijri_month");
+  String HijriYear = safeGetString(hiriDateRow, "hijri_year");
 
   // Create Date to display which is Gregoran and Hijri Date
   FullHijriDate = (HijriDate + " " + HijriMonth + " " + HijriYear);
 
   // Print Time and Todays Date First
-  if (Date.equals(TodaysDate) == true) {
+  if (Date.equals(TodaysDate)) {
     // Large Clock
     fill(255);
     textAlign(LEFT);
-    textFont(TimeFont);
-    text(Time, x(10), y(320));
+    safeTextFont(TimeFont);
+    text(Time, x(LAYOUT_LEFT_MARGIN), y(LAYOUT_TIME_Y));
 
     // Gregorian Date display
     fill(255);
     textAlign(RIGHT);
-    textFont(TodaysDateFont);
-    text(FullTodaysDate, x(2350), y(200));
+    safeTextFont(TodaysDateFont);
+    text(FullTodaysDate, x(LAYOUT_JAMAAT_ROW_X + 50), y(LAYOUT_DATE_Y));
 
     // Hijri Date display
     fill(255);
     textAlign(RIGHT);
-    textFont(TodaysDateFont);
-    text(FullHijriDate, x(2350), y(320));
+    safeTextFont(TodaysDateFont);
+    text(FullHijriDate, x(LAYOUT_JAMAAT_ROW_X + 50), y(LAYOUT_TIME_Y));
 
     // Salah Text Allignment
-    int snax = x(50); //Salah name row
-    int snay = y(848);
-    int snay_gap = y(280);
-    int stabx = x(800); //Begins row
-    int stasx = x(2300); //Jamat row
-
-
-    //*** Debug - uncomment if required
-    //println("Todays Date: " + Date);
-    //println("Time Now   : " + h + ":"+ mi);
-    //println("Current Total Time in Mins: " +  CurrentTotalTimeMins);
-    //println("TimeNow:" + Time + "  FajrTime    : "     + FajrHrs      + ":"   + FajrMin      + " Array: "   + FajrJamah    +  " Array Length: "  + FajrArray.length  + " Fajr Total Min: " + FajrTotalTimeMins);
-    //println("TimeNow:" + Time + "  DhurTime    : "     + DhuhrHrs     + ":"   + DhuhrMin     + " Array: "   + DhuhrJamah   +  " Array Length: "  + DhuhrArray.length  + " Dhur Total Min: " + dhuhr.timeInMinutes);
-    //println("TimeNow:" + Time + "  AsrTime     : "     + AsrHrs       + ":"   + AsrMin       + " Array: "   + AsrJamah   +  " Array Length: "  + AsrArray.length  + " Asr Total Min: " + AsrTotalTimeMins);
-    //println("TimeNow:" + Time + "  MaghribTime : "     + MaghribHrs   + ":"   + MaghribMin   + " Array: "   + MaghribJamah   +  " Array Length: "  + MaghribArray.length  + " Maghrib Total Min: " + MaghribTotalTimeMins);
-    //println("TimeNow:" + Time + "  IshaTime    : "     + IshaHrs      + ":"   + IshaMin      + " Array: "   + IshaJamah   +  " Array Length: "  + IshaArray.length  + " Isha Total Min: " + IshaTotalTimeMins);
+    int snax = x(LAYOUT_SALAH_NAME_X); //Salah name row
+    int snay = y(LAYOUT_SALAH_NAME_Y);
+    int snay_gap = y(LAYOUT_SALAH_GAP);
+    int stabx = x(LAYOUT_BEGINS_ROW_X); //Begins row
+    int stasx = x(LAYOUT_JAMAAT_ROW_X); //Jamat row
 
     // *** DISPLAY HEADINGS ****
     fill(255);
-    textFont(SalahTimeFontHeading);
     textAlign(LEFT);
     textFont(TodaysDateFont);
-    text("BEGINS", stabx, y(600));
+    text("BEGINS", stabx, y(LAYOUT_HEADINGS_Y));
     textFont(TodaysDateFont);
     textAlign(RIGHT);
-    text("JAMAAT", stasx, y(600));
+    text("JAMAAT", stasx, y(LAYOUT_HEADINGS_Y));
 
     // *** DISPLAY SALAH NAMES
-    textFont(SalahTimeFont);
+    safeTextFont(SalahTimeFont);
     textAlign(LEFT);
     text("Fajr", snax, snay);
     
     // Substitute Jummah for Dhuhr on Fridays
-  
-   if ((dayOfWeek == 5 && h >= 14) || (dayOfWeek == 6 && h < 15)) { 
+
+   if ((dayOfWeek == DAY_FRIDAY && h >= 14) || (dayOfWeek == DAY_SATURDAY && h < 15)) { 
       text("Jum'uah", snax, snay+snay_gap);
     } else {
       text("Dhuhr", snax, snay+snay_gap);
@@ -432,7 +472,7 @@ void draw() {
     text("Isha", snax, snay+4*snay_gap);
 
     // *** DISPLAY SALAH JAMAH TIMES
-    textFont(SalahTimeFontBold);
+    safeTextFont(SalahTimeFontBold);
     textAlign(RIGHT);
 
     // Set Prayer Times
@@ -443,7 +483,7 @@ void draw() {
     text(isha.jamahTime, stasx, snay+4*snay_gap);
 
     // *** DISPLAY SALAH JAMAH BEGIN TIMES
-    textFont(SalahTimeFont);
+    safeTextFont(SalahTimeFont);
     textAlign(LEFT);
 
     text(fajr.startTime1, stabx, snay);
@@ -458,7 +498,7 @@ void draw() {
     // 60 seconds timer.
     if (CurrentTotalTimeMins == fajr.jamahTimeInMinutes-1) {
       show60SecondsTimerFor(fajr);
-    } else if (CurrentTotalTimeMins == dhuhr.jamahTimeInMinutes-1 && !Day.equals("Fri")) {
+    } else if (CurrentTotalTimeMins == dhuhr.jamahTimeInMinutes-1 && !Day.equals(DAY_FRIDAY_NAME)) {
       show60SecondsTimerFor(dhuhr);
     } else if (CurrentTotalTimeMins == asr.jamahTimeInMinutes-1) {
       show60SecondsTimerFor(asr);
@@ -470,9 +510,9 @@ void draw() {
     // Minute Timers
     else if ((CurrentTotalTimeMins > fajr.jamahTimeInMinutes-LargeCountDown && CurrentTotalTimeMins < fajr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(fajr, CurrentTotalTimeMins);
-    } else if (CurrentTotalTimeMins >= KarahatTime && CurrentTotalTimeMins < dhuhr.startTimeInMinutes) {
+    } else if (CurrentTotalTimeMins >= karahatTime && CurrentTotalTimeMins < dhuhr.startTimeInMinutes) {
       showTimerFor("Zawal Time", dhuhr.startTimeInMinutes-CurrentTotalTimeMins, "minutes");
-    } else if (CurrentTotalTimeMins >= (dhuhr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes-1) && !Day.equals("Fri")) {
+    } else if (CurrentTotalTimeMins >= (dhuhr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes-1) && !Day.equals(DAY_FRIDAY_NAME)) {
       showMinutesTimerFor(dhuhr, CurrentTotalTimeMins);
     } else if (CurrentTotalTimeMins >= (asr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (asr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(asr, CurrentTotalTimeMins);
@@ -487,9 +527,9 @@ void draw() {
       showPrayerInProgressFor(fajr.name);
     } else if (CurrentTotalTimeMins >= sunrise.jamahTimeInMinutes && CurrentTotalTimeMins < (sunrise.jamahTimeInMinutes+SunriseOffset)) {
       showPrayerInProgressFor("sunrise");
-    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes + SalahInProgressOffset) && !Day.equals("Fri")) {
+    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes + SalahInProgressOffset) && !Day.equals(DAY_FRIDAY_NAME)) {
       showPrayerInProgressFor(dhuhr.name);       
-    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(dhuhr.jamahTimeInMinutes + JummahLenghthMin) && Day.equals("Fri")) {  
+    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(dhuhr.jamahTimeInMinutes + JummahLenghthMin) && Day.equals(DAY_FRIDAY_NAME)) {  
       showPrayerInProgressFor("Jum'uah");   
     } else if (CurrentTotalTimeMins >= asr.jamahTimeInMinutes && CurrentTotalTimeMins < (asr.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(asr.name);
@@ -502,9 +542,9 @@ void draw() {
     // Display Sunrise and Jum'uah times in right pane
     fill(0);
     stroke(0);
-    rect(x(2400), y(1996), x(1440), y(164));
+    rect(x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_BOTTOM_PANE_Y), x(LAYOUT_RIGHT_PANE_WIDTH), y(LAYOUT_BOTTOM_PANE_HEIGHT));
     textAlign(CENTER);
-    textFont(TodaysDateFont);
+    safeTextFont(TodaysDateFont);
     fill(255);
     text("Sunrise " + sunrise.jamahTime + " | Jum'uah " + jummah.jamahTime , rtpanex, rtpaney+y(615));
   } // iterate whilst todays date is the date in the file
@@ -534,16 +574,16 @@ int salahTimeInMinutes(String timeInString, int hoursOffset, boolean isDhuhrORJu
   return (((parseInt(timeArray[0])+hoursOffset)*60) +  parseInt(timeArray[1]));
 }
 
-Times getTimesFor(String name, String colJamah, String colStart1, String colStart2, TableRow row, TableRow nextRow, int CurrentTotalTimeMins, int hoursOffset, boolean isDhuhrORJumuah) {
+Times getTimesFor(String name, String colJamah, String colStart1, String colStart2, TableRow row, TableRow nextRow, int CurrentTotalTimeMins, int hoursOffset, boolean isDhuhrORJumuah, int dayOfWeek) {
   // Safety check for null rows
   if (row == null) {
     println("Error: row is null in getTimesFor for " + name);
     return new Times(name, "00:00", "00:00", "", 0, 0);
   }
 
-  String jamah = row.getString(colJamah);
-  String start1 = row.getString(colStart1);
-  String start2 = colStart2!=null?row.getString(colStart2):"";
+  String jamah = safeGetString(row, colJamah);
+  String start1 = safeGetString(row, colStart1);
+  String start2 = colStart2!=null?safeGetString(row, colStart2):"";
 
   // Safety check for null values
   if (jamah == null || jamah.isEmpty()) jamah = "00:00";
@@ -551,8 +591,8 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
 
   int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
 
-  //Set jummah's split time to show in progress    
-  if (row.getString("normal_day").equals("Fri") == true){ 
+  //Set jummah's split time to show in progress
+  if (safeGetString(row, "normal_day").equals(DAY_FRIDAY_NAME)){ 
     if (jamah.contains("/")) {
       String[] jamahs =  split(jamah,"/");
       if ((salahTimeInMinutes(jamahs[0], hoursOffset, true)+JummahLenghthMin)>=CurrentTotalTimeMins) {
@@ -564,20 +604,20 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   }
 
   //Set next jummah's salah time and show dhur for saturday
-  if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == 6 && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins)){
+  if (dayOfWeek == DAY_SATURDAY && (jamahTimeInMinutes+JummahLenghthMin <= CurrentTotalTimeMins)){
     if (nextRow != null) {
-      start1 = nextRow.getString(colStart1);
-      start2 = colStart2!=null?nextRow.getString(colStart2):"";
-      jamah = nextRow.getString(colJamah);
+      start1 = safeGetString(nextRow, colStart1);
+      start2 = colStart2!=null?safeGetString(nextRow, colStart2):"";
+      jamah = safeGetString(nextRow, colJamah);
     }
   }
 
   //Show tomorrow's salah time
-  if ((CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) && !row.getString("normal_day").equals("Fri")) {
+  if ((CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) && !safeGetString(row, "normal_day").equals(DAY_FRIDAY_NAME)) {
     if (nextRow != null) {
-      jamah = nextRow.getString(colJamah);
-      start1 = nextRow.getString(colStart1);
-      start2 = colStart2!=null?nextRow.getString(colStart2):"";
+      jamah = safeGetString(nextRow, colJamah);
+      start1 = safeGetString(nextRow, colStart1);
+      start2 = colStart2!=null?safeGetString(nextRow, colStart2):"";
     }
   }
 
@@ -589,43 +629,61 @@ void show60SecondsTimerFor(Times prayer) {
 }
 
 void showMinutesTimerFor(Times prayer, int currentTotalTimeMins) {
-  fill(currentTotalTimeMins);
   if (prayer.name == "Maghrib") {
-    showTimerFor("Time to "+prayer.name, prayer.startTimeInMinutes-currentTotalTimeMins, "minutes");         
+    showTimerFor("Time to "+prayer.name, prayer.startTimeInMinutes-currentTotalTimeMins, "minutes");
   } else {
     showTimerFor("Time to "+prayer.name, prayer.jamahTimeInMinutes-currentTotalTimeMins, "minutes");
   }
-
 }
 
 void showTimerFor(String text, int amount, String unit) {
-  fill(rightpanecolour);
-  stroke(0);
-  rect(x(2400), y(400), x(1440), y(1760));
+  drawRightPaneBackground();
   fill(255);
-  textFont(SalahTimeFont);
+  safeTextFont(SalahTimeFont);
   textAlign(CENTER);
   text(text, rtpanex, rtpaney-y(800));
-  textFont(LargeCountDownFont);
+  safeTextFont(LargeCountDownFont);
   textAlign(CENTER);
   text(amount, rtpanex, rtpaney+y(200));
-  textFont(SalahTimeFont);
+  safeTextFont(SalahTimeFont);
   textAlign(CENTER);
   text(unit, rtpanex, rtpaney+y(450));
 }
 
 void showPrayerInProgressFor(String salahName) {
-  fill(rightpanecolour);
-  stroke(0);
-  rect(x(2400), y(400), x(1440), y(1760));
+  drawRightPaneBackground();
   fill(255);
-  textFont(SalahNameFont);
+  safeTextFont(SalahNameFont);
   textAlign(CENTER);
   textSize(x(300));
   text(salahName, rtpanex, rtpaney-y(300));
-  textFont(SalahTimeFont);
+  safeTextFont(SalahTimeFont);
   textAlign(CENTER);
   text("in progress", rtpanex, rtpaney-y(50));
+}
+
+// Helper function to safely set fonts with fallback
+void safeTextFont(PFont font) {
+  if (font != null) {
+    textFont(font);
+  } else {
+    // Fallback to default font if the specified font is null
+    textFont(createFont("Arial", 16));
+  }
+}
+
+// Helper function to draw right pane background
+void drawRightPaneBackground() {
+  fill(rightpanecolour);
+  stroke(0);
+  rect(x(LAYOUT_RIGHT_PANE_X), y(LAYOUT_RIGHT_PANE_Y), x(LAYOUT_RIGHT_PANE_WIDTH), y(LAYOUT_RIGHT_PANE_HEIGHT));
+}
+
+// Helper function to safely get string from table row with null check
+String safeGetString(TableRow row, String columnName) {
+  if (row == null) return "";
+  String value = row.getString(columnName);
+  return (value == null) ? "" : value;
 }
 
 class Times {
