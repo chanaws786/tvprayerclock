@@ -163,8 +163,8 @@ void reloadTable(){
         java.net.URL url = new java.net.URL(fileUrl);
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
-        conn.setConnectTimeout(15000); // 15 second timeout
-        conn.setReadTimeout(15000);    // 15 second read timeout
+        conn.setConnectTimeout(30000); // 30 second timeout
+        conn.setReadTimeout(30000);    // 30 second read timeout
         conn.setInstanceFollowRedirects(true); // Follow redirects
         
         int responseCode = conn.getResponseCode();
@@ -222,8 +222,19 @@ void reloadTable(){
     if (newTable == null) {
       println("Loading local file...");
       String filename = getDataFilename();
-      newTable = loadTable(filename, "header");
-      println("Successfully loaded local table: " + filename);
+      try {
+        newTable = loadTable(filename, "header");
+        if (newTable != null && newTable.getRowCount() > 0) {
+          println("Successfully loaded local table: " + filename);
+        } else {
+          println("Warning: Local table loaded but is null or empty");
+          newTable = null;
+        }
+      } catch (Exception e) {
+        println("Error loading local file: " + e.getMessage());
+        e.printStackTrace();
+        newTable = null;
+      }
     }
 
     // Only update the main table if load was successful
@@ -270,9 +281,15 @@ void draw() {
     try {
       String filename = getDataFilename();
       table = loadTable(filename, "header");
-      println("Emergency reload completed: " + filename);
+      if (table != null && table.getRowCount() > 0) {
+        println("Emergency reload completed: " + filename);
+      } else {
+        println("Emergency reload failed: table is null or empty");
+        throw new Exception("Loaded table is null or empty");
+      }
     } catch (Exception e) {
       println("Emergency reload failed: " + e.getMessage());
+      e.printStackTrace();
       // Display error message with contrasting background
       fill(0);
       stroke(255);
