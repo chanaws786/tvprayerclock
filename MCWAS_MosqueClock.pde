@@ -541,15 +541,35 @@ void draw() {
     nextJumuahRow = nextRow; // Fallback to next row
   }
 
-  Times fajr = getTimesFor("Fajr", "fajr_jamah", "fajr_start", null, row, nextRow, CurrentTotalTimeMins, 0, false, dayOfWeek);
-  Times sunrise = getTimesFor("Sunrise", "sunrise", "sunrise", null, row, nextRow, CurrentTotalTimeMins, 0, false, dayOfWeek);
-  Times dhuhr = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, row, nextRow, CurrentTotalTimeMins, 0, true, dayOfWeek);
-  Times asr = getTimesFor("Asr", "asr_jamah", "asr_mitl_1", "asr_mitl_2", row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek);
-  Times maghrib = getTimesFor("Maghrib", "maghrib_jamah","maghrib_start", null, row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek);
-  Times isha = getTimesFor("Isha", "isha_jamah", "isha_start", null, row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek);
-  Times jummah = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, false, dayOfWeek);
+  Times fajr = getTimesFor("Fajr", "fajr_jamah", "fajr_start", null, row, nextRow, CurrentTotalTimeMins, 0, false, dayOfWeek, TenMinSalahInProgressOffset);
+  Times sunrise = getTimesFor("Sunrise", "sunrise", "sunrise", null, row, nextRow, CurrentTotalTimeMins, 0, false, dayOfWeek, SunriseOffset);
+  Times dhuhr = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, row, nextRow, CurrentTotalTimeMins, 0, true, dayOfWeek, SalahInProgressOffset);
+  Times asr = getTimesFor("Asr", "asr_jamah", "asr_mitl_1", "asr_mitl_2", row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek, SalahInProgressOffset);
+  Times maghrib = getTimesFor("Maghrib", "maghrib_jamah","maghrib_start", null, row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek, SalahInProgressOffset);
+  Times isha = getTimesFor("Isha", "isha_jamah", "isha_start", null, row, nextRow, CurrentTotalTimeMins, 12, false, dayOfWeek, TenMinSalahInProgressOffset);
+  Times jummah = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, jumuahRow, nextJumuahRow, CurrentTotalTimeMins, 0, true, dayOfWeek, JummahLenghthMin);
 
-  int karahatTime = dhuhr.startTimeInMinutes - KarahatTimeOffset;
+  // Calculate the actual end time of Jummah (accounting for split times)
+  int jummahEndTime = jummah.jamahTimeInMinutes + JummahLenghthMin;
+  if (safeGetString(jumuahRow, "normal_day").equals(DAY_FRIDAY_NAME)) {
+    String jamah = safeGetString(jumuahRow, "dhuhr_jamah");
+    if (jamah.contains("/")) {
+      String[] jamahs = split(jamah, "/");
+      int secondJummahTime = salahTimeInMinutes(jamahs[1], 0, true);
+      jummahEndTime = secondJummahTime + JummahLenghthMin;
+    }
+  }
+
+  // Determine if we should show Jummah label (only on Friday before Jummah time ends)
+  boolean showJummahLabel = (dayOfWeek == DAY_FRIDAY && CurrentTotalTimeMins < jummahEndTime);
+
+  // On Friday after Jummah time has passed, use next day's Dhuhr time
+  Times dhuhrToShow = dhuhr;
+  if (dayOfWeek == DAY_FRIDAY && !showJummahLabel && nextRow != null) {
+    dhuhrToShow = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, nextRow, table.getRow((rowNum % table.getRowCount() + 1) % table.getRowCount()), CurrentTotalTimeMins, 0, true, dayOfWeek, SalahInProgressOffset);
+  }
+
+  int karahatTime = dhuhrToShow.startTimeInMinutes - KarahatTimeOffset;
     
   // Hijri Date
   TableRow hiriDateRow = CurrentTotalTimeMins < maghrib.startTimeInMinutes ? row : nextRow;
@@ -603,10 +623,9 @@ void draw() {
     safeTextFont(SalahTimeFont);
     textAlign(LEFT);
     text("Fajr", snax, snay);
-    
-    // Substitute Jummah for Dhuhr on Fridays
 
-   if ((dayOfWeek == DAY_FRIDAY && h >= 14) || (dayOfWeek == DAY_SATURDAY && h < 15)) { 
+    // Substitute Jummah for Dhuhr on Fridays and Saturday before Jummah time
+   if (showJummahLabel) {
       text("Jum'uah", snax, snay+snay_gap);
     } else {
       text("Dhuhr", snax, snay+snay_gap);
@@ -622,7 +641,12 @@ void draw() {
 
     // Set Prayer Times
     text(fajr.jamahTime, stasx, snay);
-    text(dhuhr.jamahTime, stasx, snay+snay_gap);
+    // Show Jummah time instead of Dhuhr when displaying Jum'uah label
+    if (showJummahLabel) {
+      text(jummah.jamahTime, stasx, snay+snay_gap);
+    } else {
+      text(dhuhrToShow.jamahTime, stasx, snay+snay_gap);
+    }
     text(asr.jamahTime, stasx, snay+2*snay_gap);
     text(maghrib.jamahTime, stasx, snay+3*snay_gap);
     text(isha.jamahTime, stasx, snay+4*snay_gap);
@@ -632,7 +656,12 @@ void draw() {
     textAlign(LEFT);
 
     text(fajr.startTime1, stabx, snay);
-    text(dhuhr.startTime1, stabx, snay+snay_gap);
+    // Show Jummah start time instead of Dhuhr when displaying Jum'uah label
+    if (showJummahLabel) {
+      text(jummah.startTime1, stabx, snay+snay_gap);
+    } else {
+      text(dhuhrToShow.startTime1, stabx, snay+snay_gap);
+    }
     // Set Asr Begins Time - we need to show Mitl 1 and Mitl 2
     text(asr.startTime1 + "/" + asr.startTime2, stabx, snay+2*snay_gap);
     text(maghrib.startTime1, stabx, snay+3*snay_gap);
@@ -643,8 +672,10 @@ void draw() {
     // 60 seconds timer.
     if (CurrentTotalTimeMins == fajr.jamahTimeInMinutes-1) {
       show60SecondsTimerFor(fajr);
-    } else if (CurrentTotalTimeMins == dhuhr.jamahTimeInMinutes-1 && !Day.equals(DAY_FRIDAY_NAME)) {
-      show60SecondsTimerFor(dhuhr);
+    } else if (CurrentTotalTimeMins == dhuhrToShow.jamahTimeInMinutes-1 && !showJummahLabel) {
+      show60SecondsTimerFor(dhuhrToShow);
+    } else if (CurrentTotalTimeMins == jummah.jamahTimeInMinutes-1 && showJummahLabel) {
+      showTimerFor("Time to Jum'uah", SalahCountDownStart - second(), "seconds");
     } else if (CurrentTotalTimeMins == asr.jamahTimeInMinutes-1) {
       show60SecondsTimerFor(asr);
     } else if (CurrentTotalTimeMins == maghrib.startTimeInMinutes-1) {
@@ -655,10 +686,12 @@ void draw() {
     // Minute Timers
     else if ((CurrentTotalTimeMins > fajr.jamahTimeInMinutes-LargeCountDown && CurrentTotalTimeMins < fajr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(fajr, CurrentTotalTimeMins);
-    } else if (CurrentTotalTimeMins >= karahatTime && CurrentTotalTimeMins < dhuhr.startTimeInMinutes) {
-      showTimerFor("Zawal Time", dhuhr.startTimeInMinutes-CurrentTotalTimeMins, "minutes");
-    } else if (CurrentTotalTimeMins >= (dhuhr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes-1) && !Day.equals(DAY_FRIDAY_NAME)) {
-      showMinutesTimerFor(dhuhr, CurrentTotalTimeMins);
+    } else if (CurrentTotalTimeMins >= karahatTime && CurrentTotalTimeMins < dhuhrToShow.startTimeInMinutes) {
+      showTimerFor("Zawal Time", dhuhrToShow.startTimeInMinutes-CurrentTotalTimeMins, "minutes");
+    } else if (CurrentTotalTimeMins >= (dhuhrToShow.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhrToShow.jamahTimeInMinutes-1) && !showJummahLabel) {
+      showMinutesTimerFor(dhuhrToShow, CurrentTotalTimeMins);
+    } else if (CurrentTotalTimeMins >= (jummah.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (jummah.jamahTimeInMinutes-1) && showJummahLabel) {
+      showTimerFor("Time to Jum'uah", jummah.jamahTimeInMinutes-CurrentTotalTimeMins, "minutes");
     } else if (CurrentTotalTimeMins >= (asr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (asr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(asr, CurrentTotalTimeMins);
     } else if (CurrentTotalTimeMins >= (maghrib.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes-1)) {
@@ -672,10 +705,10 @@ void draw() {
       showPrayerInProgressFor(fajr.name);
     } else if (CurrentTotalTimeMins >= sunrise.jamahTimeInMinutes && CurrentTotalTimeMins < (sunrise.jamahTimeInMinutes+SunriseOffset)) {
       showPrayerInProgressFor("sunrise");
-    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhr.jamahTimeInMinutes + SalahInProgressOffset) && !Day.equals(DAY_FRIDAY_NAME)) {
-      showPrayerInProgressFor(dhuhr.name);       
-    } else if (CurrentTotalTimeMins >= dhuhr.jamahTimeInMinutes && CurrentTotalTimeMins <(dhuhr.jamahTimeInMinutes + JummahLenghthMin) && Day.equals(DAY_FRIDAY_NAME)) {  
-      showPrayerInProgressFor("Jum'uah");   
+    } else if (CurrentTotalTimeMins >= dhuhrToShow.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhrToShow.jamahTimeInMinutes + SalahInProgressOffset) && !showJummahLabel) {
+      showPrayerInProgressFor(dhuhrToShow.name);
+    } else if (CurrentTotalTimeMins >= jummah.jamahTimeInMinutes && CurrentTotalTimeMins < (jummah.jamahTimeInMinutes + JummahLenghthMin) && showJummahLabel) {
+      showPrayerInProgressFor("Jum'uah");
     } else if (CurrentTotalTimeMins >= asr.jamahTimeInMinutes && CurrentTotalTimeMins < (asr.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(asr.name);
     } else if (CurrentTotalTimeMins >= maghrib.jamahTimeInMinutes && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes + SalahInProgressOffset)) {
@@ -719,7 +752,7 @@ int salahTimeInMinutes(String timeInString, int hoursOffset, boolean isDhuhrORJu
   return (((parseInt(timeArray[0])+hoursOffset)*60) +  parseInt(timeArray[1]));
 }
 
-Times getTimesFor(String name, String colJamah, String colStart1, String colStart2, TableRow row, TableRow nextRow, int CurrentTotalTimeMins, int hoursOffset, boolean isDhuhrORJumuah, int dayOfWeek) {
+Times getTimesFor(String name, String colJamah, String colStart1, String colStart2, TableRow row, TableRow nextRow, int CurrentTotalTimeMins, int hoursOffset, boolean isDhuhrORJumuah, int dayOfWeek, int inProgressOffset) {
   // Safety check for null rows
   if (row == null) {
     logger.error("row is null in getTimesFor for " + name);
@@ -735,16 +768,22 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   if (start1 == null || start1.isEmpty()) start1 = "00:00";
 
   int jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
+  int originalJamahTimeInMinutes = jamahTimeInMinutes; // Save original for condition check
 
   //Set jummah's split time to show in progress
-  if (safeGetString(row, "normal_day").equals(DAY_FRIDAY_NAME)){ 
+  if (safeGetString(row, "normal_day").equals(DAY_FRIDAY_NAME)){
     if (jamah.contains("/")) {
       String[] jamahs =  split(jamah,"/");
-      if ((salahTimeInMinutes(jamahs[0], hoursOffset, true)+JummahLenghthMin)>=CurrentTotalTimeMins) {
+      int firstJummahEnd = salahTimeInMinutes(jamahs[0], hoursOffset, true)+JummahLenghthMin;
+      int secondJummahEnd = salahTimeInMinutes(jamahs[1], hoursOffset, true)+JummahLenghthMin;
+
+      // Only use split times if we haven't passed the last Jummah time
+      if (firstJummahEnd >= CurrentTotalTimeMins) {
         jamahTimeInMinutes = salahTimeInMinutes(jamahs[0], hoursOffset, isDhuhrORJumuah);
-      } else if ((salahTimeInMinutes(jamahs[1], hoursOffset, true)+JummahLenghthMin)>=CurrentTotalTimeMins) {
+      } else if (secondJummahEnd >= CurrentTotalTimeMins) {
         jamahTimeInMinutes = salahTimeInMinutes(jamahs[1], hoursOffset, true);
       }
+      // If we've passed both Jummah times, keep the original jamahTimeInMinutes
     }
   }
 
@@ -754,15 +793,18 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
       start1 = safeGetString(nextRow, colStart1);
       start2 = colStart2!=null?safeGetString(nextRow, colStart2):"";
       jamah = safeGetString(nextRow, colJamah);
+      jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
     }
   }
 
-  //Show tomorrow's salah time
-  if ((CurrentTotalTimeMins>=jamahTimeInMinutes+NextDayTriggerInMinutes) && !safeGetString(row, "normal_day").equals(DAY_FRIDAY_NAME)) {
+  //Show tomorrow's salah time after jamat in progress is finished
+  // Don't apply this logic for Jummah (inProgressOffset == JummahLenghthMin)
+  if (CurrentTotalTimeMins>=originalJamahTimeInMinutes+inProgressOffset && inProgressOffset != JummahLenghthMin) {
     if (nextRow != null) {
       jamah = safeGetString(nextRow, colJamah);
       start1 = safeGetString(nextRow, colStart1);
       start2 = colStart2!=null?safeGetString(nextRow, colStart2):"";
+      jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
     }
   }
 
