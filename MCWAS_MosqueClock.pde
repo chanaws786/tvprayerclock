@@ -13,7 +13,7 @@ int viewWidth;
 int viewHeight;
 float xRatio;
 float yRatio;
-Table table;
+volatile Table table;
 
 // Fonts
 PFont TimeFont;
@@ -260,8 +260,14 @@ void reloadTable(){
         conn.setConnectTimeout(urlConnectionTimeout);
         conn.setReadTimeout(urlReadTimeout);
         conn.setInstanceFollowRedirects(true); // Follow redirects
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+        conn.setRequestProperty("Accept", "text/csv");
+        conn.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate");
+        conn.setRequestProperty("Pragma", "no-cache");
+        conn.setUseCaches(false);
 
         int responseCode = conn.getResponseCode();
+        logger.info("URL response code: " + responseCode + " for " + fileUrl);
         if (responseCode == 200) {
           java.io.InputStream is = null;
           java.io.BufferedReader reader = null;
@@ -284,7 +290,12 @@ void reloadTable(){
 
             // Load from temp file
             newTable = loadTable(tempFile.getAbsolutePath(), "header");
-            logger.info("Successfully loaded table from URL");
+            if (newTable == null || newTable.getColumnCount() < 2 || newTable.getRowCount() == 0) {
+              logger.warn("URL did not return a valid CSV timetable, falling back to local file");
+              newTable = null;
+            } else {
+              logger.info("Successfully loaded table from URL, rows=" + newTable.getRowCount() + ", cols=" + newTable.getColumnCount());
+            }
           } finally {
             // Close resources in finally block to prevent leaks
             if (reader != null) {
@@ -572,7 +583,8 @@ void draw() {
   boolean showJummahLabel = (dayOfWeek == DAY_FRIDAY && CurrentTotalTimeMins < jummahEndTime) ||
                             (dayOfWeek == DAY_THURSDAY && dhuhrToShow.isNextDay);
 
-  int karahatTime = dhuhrToShow.startTimeInMinutes - KarahatTimeOffset;
+  int todaysDhuhrStartTime = salahTimeInMinutes(safeGetString(row, "dhuhr_start"), 0, true);
+  int karahatTime = todaysDhuhrStartTime - KarahatTimeOffset;
     
   // Hijri Date
   TableRow hiriDateRow = CurrentTotalTimeMins < maghrib.startTimeInMinutes ? row : nextRow;
@@ -689,11 +701,11 @@ void draw() {
     // Minute Timers
     else if (!fajr.isNextDay && (CurrentTotalTimeMins > fajr.jamahTimeInMinutes-LargeCountDown && CurrentTotalTimeMins < fajr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(fajr, CurrentTotalTimeMins);
-    } else if (!dhuhrToShow.isNextDay && CurrentTotalTimeMins >= karahatTime && CurrentTotalTimeMins < dhuhrToShow.startTimeInMinutes) {
-      showTimerFor("Zawal Time", dhuhrToShow.startTimeInMinutes-CurrentTotalTimeMins, "minutes");
+    } else if (dayOfWeek != DAY_THURSDAY && CurrentTotalTimeMins >= karahatTime && CurrentTotalTimeMins < todaysDhuhrStartTime) {
+      showTimerFor("Zawal Time", todaysDhuhrStartTime-CurrentTotalTimeMins, "minutes");
     } else if (!dhuhrToShow.isNextDay && CurrentTotalTimeMins >= (dhuhrToShow.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhrToShow.jamahTimeInMinutes-1) && !showJummahLabel) {
       showMinutesTimerFor(dhuhrToShow, CurrentTotalTimeMins);
-    } else if (!jummah.isNextDay && CurrentTotalTimeMins >= (jummah.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (jummah.jamahTimeInMinutes-1) && showJummahLabel) {
+    } else if (!jummah.isNextDay && dayOfWeek == DAY_FRIDAY && CurrentTotalTimeMins >= todaysDhuhrStartTime && CurrentTotalTimeMins < (jummah.jamahTimeInMinutes-1) && showJummahLabel) {
       showTimerFor("Time to Jum'uah", jummah.jamahTimeInMinutes-CurrentTotalTimeMins, "minutes");
     } else if (!asr.isNextDay && CurrentTotalTimeMins >= (asr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (asr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(asr, CurrentTotalTimeMins);
@@ -806,19 +818,6 @@ Times getTimesFor(String name, String colJamah, String colStart1, String colStar
   // Don't apply this logic for Jummah (inProgressOffset == JummahLenghthMin)
   if (CurrentTotalTimeMins>=originalJamahTimeInMinutes+inProgressOffset && inProgressOffset != JummahLenghthMin) {
     if (nextRow != null) {
-      jamah = safeGetString(nextRow, colJamah);
-      start1 = safeGetString(nextRow, colStart1);
-      start2 = colStart2!=null?safeGetString(nextRow, colStart2):"";
-      jamahTimeInMinutes = salahTimeInMinutes(jamah, hoursOffset, isDhuhrORJumuah);
-      isNextDay = true;
-    }
-  }
-  
-  // Handle day boundary: if current time is early morning (before 6 AM) and prayer time is late night (after 6 PM),
-  // we've crossed midnight and should use next day's prayer times
-  if (CurrentTotalTimeMins < 360 && originalJamahTimeInMinutes > 1080 && inProgressOffset != JummahLenghthMin) {
-    if (nextRow != null) {
-      logger.debug("Day boundary detected: switching to next day's prayer times for " + name);
       jamah = safeGetString(nextRow, colJamah);
       start1 = safeGetString(nextRow, colStart1);
       start2 = colStart2!=null?safeGetString(nextRow, colStart2):"";
