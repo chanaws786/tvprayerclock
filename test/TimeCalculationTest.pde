@@ -100,6 +100,9 @@ void testIsRamadanMonth() {
   boolean result2 = isRamadanMonth("Ramadhan");
   assertEquals(true, result2, "isRamadanMonth('Ramadhan') should return true");
   
+  // Spelling used in the MCWAS timetable sheet (with macron)
+  assertEquals(true, isRamadanMonth("Ramadān"), "isRamadanMonth('Ramadān') should return true");
+
   // Test other months
   boolean result3 = isRamadanMonth("Shawwal");
   assertEquals(false, result3, "isRamadanMonth('Shawwal') should return false");
@@ -151,7 +154,11 @@ int salahTimeInMinutes(String timeInString, int hoursOffset, boolean isDhuhrORJu
 }
 
 boolean isRamadanMonth(String hijriMonth) {
-  return hijriMonth != null && (hijriMonth.equalsIgnoreCase("Ramadan") || hijriMonth.equalsIgnoreCase("Ramadhan"));
+  if (hijriMonth == null) return false;
+  String plain = java.text.Normalizer.normalize(hijriMonth.trim(), java.text.Normalizer.Form.NFD)
+    .replaceAll("\\p{M}", "")
+    .toLowerCase();
+  return plain.startsWith("ramad");
 }
 
 // Assertion helper

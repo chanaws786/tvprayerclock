@@ -166,9 +166,35 @@ String getDataFilename() {
   return "data/mcwas_prayer_timetable_" + currentYear + ".csv";
 }
 
-// Helper function to check if current hijri month is Ramadan
+// Today's date in the timetable's "normal_date" format, e.g. "23 Oct"
+String todaysDateKey() {
+  return day() + " " + MONTH_NAMES[month() - 1];
+}
+
+// Returns null if the table looks like a complete timetable, otherwise a short reason.
+// Guards against partial downloads and error pages that still parse as CSV.
+String timetableProblem(Table t) {
+  if (t == null) return "no table";
+  String[] required = {"month_num", "normal_day", "normal_date", "hijri_month", "fajr_jamah", "dhuhr_start", "dhuhr_jamah", "asr_jamah", "maghrib_start", "isha_jamah"};
+  String[] titles = t.getColumnTitles();
+  if (titles == null) return "no header row";
+  java.util.List<String> columns = java.util.Arrays.asList(titles);
+  for (String col : required) {
+    if (!columns.contains(col)) return "missing column " + col;
+  }
+  if (t.getRowCount() < 365) return "only " + t.getRowCount() + " rows";
+  if (t.findRow(todaysDateKey(), "normal_date") == null) return "no row for " + todaysDateKey();
+  return null;
+}
+
+// Helper function to check if current hijri month is Ramadan.
+// Accent-insensitive, so the sheet's "Ramadān" matches as well as Ramadan/Ramadhan.
 boolean isRamadanMonth(String hijriMonth) {
-  return hijriMonth != null && (hijriMonth.equalsIgnoreCase("Ramadan") || hijriMonth.equalsIgnoreCase("Ramadhan"));
+  if (hijriMonth == null) return false;
+  String plain = java.text.Normalizer.normalize(hijriMonth.trim(), java.text.Normalizer.Form.NFD)
+    .replaceAll("\\p{M}", "")
+    .toLowerCase();
+  return plain.startsWith("ramad");
 }
 
 // Helper function to check if current time is within Ramadan grey screen window (configurable via config.properties)
@@ -270,45 +296,22 @@ void reloadTable(){
         logger.info("URL response code: " + responseCode + " for " + fileUrl);
         if (responseCode == 200) {
           java.io.InputStream is = null;
-          java.io.BufferedReader reader = null;
-          java.io.FileWriter writer = null;
-          java.io.File tempFile = null;
-
           try {
+            // Parse the CSV straight from the download (Processing reads it as UTF-8).
+            // The old version wrote it to a temp file and loaded that before the
+            // writer was closed, so the last ~3KB (about Dec onwards) went missing.
             is = conn.getInputStream();
-            reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
-            StringBuilder content = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-              content.append(line).append("\n");
-            }
-
-            // Save to temporary file
-            tempFile = java.io.File.createTempFile("prayer_timetable", ".csv");
-            writer = new java.io.FileWriter(tempFile);
-            writer.write(content.toString());
-
-            // Load from temp file
-            newTable = loadTable(tempFile.getAbsolutePath(), "header");
-            if (newTable == null || newTable.getColumnCount() < 2 || newTable.getRowCount() == 0) {
-              logger.warn("URL did not return a valid CSV timetable, falling back to local file");
+            newTable = new Table(is, "header,csv");
+            String problem = timetableProblem(newTable);
+            if (problem != null) {
+              logger.warn("URL did not return a usable timetable (" + problem + "), falling back to local file");
               newTable = null;
             } else {
               logger.info("Successfully loaded table from URL, rows=" + newTable.getRowCount() + ", cols=" + newTable.getColumnCount());
             }
           } finally {
-            // Close resources in finally block to prevent leaks
-            if (reader != null) {
-              try { reader.close(); } catch (Exception e) { logger.error("Error closing reader", e); }
-            }
             if (is != null) {
               try { is.close(); } catch (Exception e) { logger.error("Error closing input stream", e); }
-            }
-            if (writer != null) {
-              try { writer.close(); } catch (Exception e) { logger.error("Error closing writer", e); }
-            }
-            if (tempFile != null && tempFile.exists()) {
-              tempFile.delete();
             }
           }
         } else {
@@ -329,6 +332,10 @@ void reloadTable(){
       try {
         newTable = loadTable(filename, "header");
         if (newTable != null && newTable.getRowCount() > 0) {
+          String problem = timetableProblem(newTable);
+          if (problem != null) {
+            logger.warn("Local table " + filename + " may be incomplete: " + problem);
+          }
           logger.info("Successfully loaded local table: " + filename);
         } else {
           logger.warn("Local table loaded but is null or empty");
@@ -574,7 +581,12 @@ void draw() {
   // On Friday after Jummah time has passed, use next day's Dhuhr time
   Times dhuhrToShow = dhuhr;
   if (dayOfWeek == DAY_FRIDAY && CurrentTotalTimeMins >= jummahEndTime && nextRow != null) {
-    dhuhrToShow = getTimesFor("Dhuhr", "dhuhr_jamah", "dhuhr_start", null, nextRow, table.getRow((rowNum % table.getRowCount() + 1) % table.getRowCount()), CurrentTotalTimeMins, 0, true, dayOfWeek, SalahInProgressOffset);
+    // Take Saturday's Dhuhr directly. Going through getTimesFor() here re-applied the
+    // "after Jamaat, show next day" rule to Saturday's row and displayed Sunday instead.
+    String satJamah = safeGetString(nextRow, "dhuhr_jamah");
+    String satStart = safeGetString(nextRow, "dhuhr_start");
+    dhuhrToShow = new Times("Dhuhr", satJamah, satStart, "",
+                            salahTimeInMinutes(satJamah, 0, true), salahTimeInMinutes(satStart, 0, true), true);
   }
 
   // Determine if we should show Jummah label
@@ -701,7 +713,7 @@ void draw() {
     // Minute Timers
     else if (!fajr.isNextDay && (CurrentTotalTimeMins > fajr.jamahTimeInMinutes-LargeCountDown && CurrentTotalTimeMins < fajr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(fajr, CurrentTotalTimeMins);
-    } else if (dayOfWeek != DAY_THURSDAY && CurrentTotalTimeMins >= karahatTime && CurrentTotalTimeMins < todaysDhuhrStartTime) {
+    } else if (CurrentTotalTimeMins >= karahatTime && CurrentTotalTimeMins < todaysDhuhrStartTime) {
       showTimerFor("Zawal Time", todaysDhuhrStartTime-CurrentTotalTimeMins, "minutes");
     } else if (!dhuhrToShow.isNextDay && CurrentTotalTimeMins >= (dhuhrToShow.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhrToShow.jamahTimeInMinutes-1) && !showJummahLabel) {
       showMinutesTimerFor(dhuhrToShow, CurrentTotalTimeMins);
