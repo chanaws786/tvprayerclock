@@ -27,6 +27,7 @@ PFont SalahNameFont;
 long lastReloadTime = 0;
 int reloadInterval;
 volatile boolean isReloading = false;
+volatile String tableSource = "none"; // where the current timetable came from (for logs)
 Table backupTable;
 
 // Ramadan grey screen tracking
@@ -325,7 +326,16 @@ void reloadTable(){
       }
     }
 
+    // If the sheet couldn't be fetched this time but we already have a timetable,
+    // keep it. Previously this fell through to the local CSV and replaced the
+    // sheet's (newer) times with the old file until the next successful reload.
+    if (newTable == null && fileUrl.length() > 1 && table != null) {
+      logger.warn("Keeping current timetable (from " + tableSource + ") until the sheet can be loaded again");
+      return;
+    }
+
     // Fallback to local file if URL load failed or not configured
+    boolean loadedFromUrl = (newTable != null);
     if (newTable == null) {
       logger.info("Loading local file...");
       String filename = getDataFilename();
@@ -351,7 +361,8 @@ void reloadTable(){
     if (newTable != null && newTable.getRowCount() > 0) {
       backupTable = table; // Keep current table as backup
       table = newTable;
-      logger.info("Table reloaded successfully at " + getCurrentTime());
+      tableSource = loadedFromUrl ? "Google Sheet" : ("local file " + getDataFilename());
+      logger.info("Table reloaded successfully from " + tableSource + " at " + getCurrentTime());
     } else {
       logger.error("Reload failed: table is null or empty, keeping current table");
     }
