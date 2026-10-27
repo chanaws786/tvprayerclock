@@ -1,4 +1,6 @@
 windows-amd64
-/MCWAS_MosqueClock2028279845573326242.autosave
+*.autosave
 /sketch.properties
 /windows-amd64.zi_
+config.properties.local
+.DS_Store
