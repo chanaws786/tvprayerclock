@@ -94,6 +94,9 @@ final int DAY_SATURDAY = 7;
 // Day name constants for string comparisons
 final String DAY_FRIDAY_NAME = "Fri";
 
+// Name shown on screen for the Friday prayer
+final String JUMUAH_NAME = "Jumuāh";
+
 void setup() {
 
   // Load configuration from properties file
@@ -664,7 +667,7 @@ void draw() {
 
     // Substitute Jummah for Dhuhr on Fridays and Saturday before Jummah time
    if (showJummahLabel) {
-      text("Jum'uah", snax, snay+snay_gap);
+      text(JUMUAH_NAME, snax, snay+snay_gap);
     } else {
       text("Dhuhr", snax, snay+snay_gap);
     }
@@ -712,8 +715,8 @@ void draw() {
       show60SecondsTimerFor(fajr);
     } else if (!dhuhrToShow.isNextDay && CurrentTotalTimeMins == dhuhrToShow.jamahTimeInMinutes-1 && !showJummahLabel) {
       show60SecondsTimerFor(dhuhrToShow);
-    } else if (!jummah.isNextDay && CurrentTotalTimeMins == jummah.jamahTimeInMinutes-1 && showJummahLabel) {
-      showTimerFor("Time to Jum'uah", SalahCountDownStart - second(), "seconds");
+    } else if (!jummah.isNextDay && dayOfWeek == DAY_FRIDAY && CurrentTotalTimeMins == jummah.jamahTimeInMinutes-1 && showJummahLabel) {
+      showTimerFor("Time to " + JUMUAH_NAME, SalahCountDownStart - second(), "seconds");
     } else if (!asr.isNextDay && CurrentTotalTimeMins == asr.jamahTimeInMinutes-1) {
       show60SecondsTimerFor(asr);
     } else if (!maghrib.isNextDay && CurrentTotalTimeMins == maghrib.startTimeInMinutes-1) {
@@ -729,7 +732,7 @@ void draw() {
     } else if (!dhuhrToShow.isNextDay && CurrentTotalTimeMins >= (dhuhrToShow.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (dhuhrToShow.jamahTimeInMinutes-1) && !showJummahLabel) {
       showMinutesTimerFor(dhuhrToShow, CurrentTotalTimeMins);
     } else if (!jummah.isNextDay && dayOfWeek == DAY_FRIDAY && CurrentTotalTimeMins >= todaysDhuhrStartTime && CurrentTotalTimeMins < (jummah.jamahTimeInMinutes-1) && showJummahLabel) {
-      showTimerFor("Time to Jum'uah", jummah.jamahTimeInMinutes-CurrentTotalTimeMins, "minutes");
+      showTimerFor("Time to " + JUMUAH_NAME, jummah.jamahTimeInMinutes-CurrentTotalTimeMins, "minutes");
     } else if (!asr.isNextDay && CurrentTotalTimeMins >= (asr.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (asr.jamahTimeInMinutes-1)) {
       showMinutesTimerFor(asr, CurrentTotalTimeMins);
     } else if (!maghrib.isNextDay && CurrentTotalTimeMins >= (maghrib.jamahTimeInMinutes-LargeCountDown) && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes-1)) {
@@ -745,8 +748,8 @@ void draw() {
       showPrayerInProgressFor("sunrise");
     } else if (!dhuhrToShow.isNextDay && CurrentTotalTimeMins >= dhuhrToShow.jamahTimeInMinutes && CurrentTotalTimeMins < (dhuhrToShow.jamahTimeInMinutes + SalahInProgressOffset) && !showJummahLabel) {
       showPrayerInProgressFor("Dhuhr");
-    } else if (!jummah.isNextDay && CurrentTotalTimeMins >= jummah.jamahTimeInMinutes && CurrentTotalTimeMins < (jummah.jamahTimeInMinutes + JummahLenghthMin) && showJummahLabel) {
-      showPrayerInProgressFor("Jum'uah");
+    } else if (!jummah.isNextDay && dayOfWeek == DAY_FRIDAY && CurrentTotalTimeMins >= jummah.jamahTimeInMinutes && CurrentTotalTimeMins < (jummah.jamahTimeInMinutes + JummahLenghthMin) && showJummahLabel) {
+      showPrayerInProgressFor(JUMUAH_NAME);
     } else if (!asr.isNextDay && CurrentTotalTimeMins >= asr.jamahTimeInMinutes && CurrentTotalTimeMins < (asr.jamahTimeInMinutes + SalahInProgressOffset)) {
       showPrayerInProgressFor(asr.name);
     } else if (!maghrib.isNextDay && CurrentTotalTimeMins >= maghrib.jamahTimeInMinutes && CurrentTotalTimeMins < (maghrib.jamahTimeInMinutes + SalahInProgressOffset)) {
@@ -762,7 +765,7 @@ void draw() {
     textAlign(CENTER);
     safeTextFont(TodaysDateFont);
     fill(255);
-    text("Sunrise " + sunrise.jamahTime + " | Jum'uah " + jummah.jamahTime , rtpanex, rtpaney+y(615));
+    text("Sunrise " + sunrise.jamahTime + " | " + JUMUAH_NAME + " " + jummah.jamahTime , rtpanex, rtpaney+y(615));
   } // iterate whilst todays date is the date in the file
 } // void draw()
 
