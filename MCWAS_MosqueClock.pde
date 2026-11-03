@@ -97,6 +97,9 @@ final String DAY_FRIDAY_NAME = "Fri";
 // Name shown on screen for the Friday prayer
 final String JUMUAH_NAME = "Jumuāh";
 
+// Heading shown above the congregation times column
+final String JAMAAH_HEADING = "Jamā‘ah";
+
 void setup() {
 
   // Load configuration from properties file
@@ -658,7 +661,7 @@ void draw() {
     text("BEGINS", stabx, y(LAYOUT_HEADINGS_Y));
     textFont(TodaysDateFont);
     textAlign(RIGHT);
-    text("JAMAAT", stasx, y(LAYOUT_HEADINGS_Y));
+    text(JAMAAH_HEADING, stasx, y(LAYOUT_HEADINGS_Y));
 
     // *** DISPLAY SALAH NAMES
     safeTextFont(SalahTimeFont);
