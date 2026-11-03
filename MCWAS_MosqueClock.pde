@@ -98,7 +98,7 @@ final String DAY_FRIDAY_NAME = "Fri";
 final String JUMUAH_NAME = "Jumuāh";
 
 // Heading shown above the congregation times column
-final String JAMAAH_HEADING = "Jamā‘ah";
+final String JAMAAH_HEADING = "JAMĀ‘AH";
 
 void setup() {
 
